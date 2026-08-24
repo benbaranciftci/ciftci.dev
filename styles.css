@@ -1,0 +1,107 @@
+:root {
+  --ink: #1c2430;
+  --ink-soft: #4a5568;
+  --brand: #1a5f5a;
+  --paper: #f7f8fa;
+  --mist: #e4eaf1;
+  --haze: #d5e0e8;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  min-height: 100%;
+  font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+  color: var(--ink);
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(ellipse 90% 70% at 15% 10%, var(--haze) 0%, transparent 55%),
+    radial-gradient(ellipse 80% 60% at 90% 85%, var(--mist) 0%, transparent 50%),
+    linear-gradient(165deg, #eef2f6 0%, var(--paper) 45%, #ebeff4 100%);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 2rem 1.5rem;
+}
+
+.content {
+  text-align: center;
+  max-width: 36rem;
+  animation: rise 0.9s ease-out both;
+}
+
+.brand {
+  font-size: clamp(0.8rem, 1.8vw, 0.95rem);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: lowercase;
+  color: var(--brand);
+  margin-bottom: 1.35rem;
+  animation: fade 1s ease-out 0.15s both;
+}
+
+.name {
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  font-size: clamp(2.4rem, 8vw, 3.75rem);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--ink);
+  margin-bottom: 0.85rem;
+  animation: fade 1s ease-out 0.3s both;
+}
+
+.role {
+  font-size: clamp(0.95rem, 2.4vw, 1.1rem);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  animation: fade 1s ease-out 0.45s both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .content,
+  .brand,
+  .name,
+  .role {
+    animation: none;
+  }
+}
