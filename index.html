@@ -5,27 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Baran Çiftçi — Developer & Computer Engineering Student. ciftci.dev"
+      content="Baran Çiftçi. Developer and computer engineering student. ciftci.dev"
     />
     <title>baran çiftçi</title>
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.svg?v=4" type="image/svg+xml" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
     <header class="site-header">
       <a class="brand" href="/">ciftci.dev</a>
-      <nav class="nav">
+      <nav class="nav" aria-label="Primary">
         <a href="#work">Work</a>
         <a href="#about">About</a>
         <a href="#contact">Contact</a>
       </nav>
     </header>
 
-    <main>
+    <main id="main">
       <section class="hero">
         <h1 class="name">Baran Çiftçi</h1>
         <p class="lede">
-          Torino / Istanbul. I build software, robots, and games —
+          Torino and Istanbul. I build software, robots, and games while
           studying computer engineering.
         </p>
         <div class="hero-links">
@@ -103,11 +105,42 @@
 
     <footer class="site-footer">
       <span>© <span id="year"></span> Baran Çiftçi</span>
-      <span>Torino / Istanbul</span>
+      <span>Torino and Istanbul</span>
     </footer>
 
     <script>
       document.getElementById("year").textContent = new Date().getFullYear();
+
+      const navLinks = document.querySelectorAll(".nav a[href^='#']");
+      const sections = [...navLinks]
+        .map((link) => document.querySelector(link.getAttribute("href")))
+        .filter(Boolean);
+
+      function setCurrentNav() {
+        const offset = window.scrollY + 120;
+        let current = sections[0];
+
+        for (const section of sections) {
+          if (section.offsetTop <= offset) current = section;
+        }
+
+        navLinks.forEach((link) => {
+          const match = link.getAttribute("href") === `#${current.id}`;
+          if (match) link.setAttribute("aria-current", "location");
+          else link.removeAttribute("aria-current");
+        });
+      }
+
+      setCurrentNav();
+      window.addEventListener("hashchange", setCurrentNav);
+
+      if ("IntersectionObserver" in window) {
+        const observer = new IntersectionObserver(
+          () => setCurrentNav(),
+          { rootMargin: "-20% 0px -60% 0px", threshold: 0 }
+        );
+        sections.forEach((section) => observer.observe(section));
+      }
     </script>
   </body>
 </html>
