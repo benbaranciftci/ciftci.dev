@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Baran Çiftçi — DNA menu." />
+    <title>DNA · baran çiftçi</title>
+    <link rel="icon" href="/favicon.svg?v=4" type="image/svg+xml" />
+    <link rel="stylesheet" href="menu.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
+        }
+      }
+    </script>
+  </head>
+  <body class="dna-body">
+    <a class="skip-link" href="#hud">Skip to DNA</a>
+
+    <div id="strand" aria-hidden="true"></div>
+
+    <nav id="section-menu" class="section-menu" aria-label="Sections">
+      <button type="button" class="sec-btn is-active" data-jump="projects">Projects</button>
+      <button type="button" class="sec-btn" data-jump="about">About</button>
+      <button type="button" class="sec-btn" data-jump="contact">Contact</button>
+      <a class="sec-btn" href="/">Resume</a>
+    </nav>
+
+    <div id="hud" class="hud">
+      <div class="hud-tl" id="hud-tl">
+        <p class="year"><span class="arrow">›</span> <span id="year">2026</span></p>
+        <p class="name" id="mem-name">BARAN ÇİFTÇİ</p>
+        <p class="hint" id="hint">Browse nucleotides along the strand</p>
+      </div>
+      <div class="hud-sync" id="sync-box">
+        <span class="sync-top" id="sync-label">GEN</span>
+        <span class="sync-bot" id="sync-val">01</span>
+      </div>
+      <div class="hud-tr">
+        <p id="region-label">PROJECTS</p>
+        <p class="region-sub" id="region-sub">GENOMES</p>
+      </div>
+      <div class="marker" id="marker" aria-hidden="true">
+        <span class="marker-line"></span>
+        <span class="marker-diamond"></span>
+      </div>
+    </div>
+
+    <aside id="memory-panel" class="memory-panel" hidden>
+      <button type="button" class="panel-close" id="panel-close">Close</button>
+      <p class="panel-kicker" id="panel-kicker">Genome</p>
+      <h2 class="panel-title" id="panel-title">—</h2>
+      <p class="panel-body" id="panel-body"></p>
+      <dl class="panel-facts" id="panel-facts" hidden></dl>
+      <a class="panel-cta" id="panel-cta" href="#">Enter</a>
+    </aside>
+
+    <footer class="bar">
+      <div class="bar-left">
+        <span class="duo" aria-hidden="true"></span>
+        <span>DNA</span>
+        <a class="leave" href="/">Leave</a>
+      </div>
+      <div class="bar-right">
+        <button type="button" class="bar-btn" id="btn-prev"><kbd>←</kbd> Prev</button>
+        <button type="button" class="bar-btn" id="btn-next"><kbd>→</kbd> Next</button>
+        <button type="button" class="bar-btn" id="btn-select"><kbd>↵</kbd> Select</button>
+        <button type="button" class="bar-btn" id="btn-back"><kbd>Esc</kbd> Back</button>
+      </div>
+    </footer>
+
+    <script type="module" src="menu.js"></script>
+  </body>
+</html>
