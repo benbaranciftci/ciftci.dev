@@ -1,56 +1,12 @@
 import * as THREE from "three";
 
-const GENOMES = [
-  {
-    id: "projects",
-    region: "PROJECTS",
-    year: "SEQ",
-    name: "PROJECTS",
-    sync: "GEN",
-    kind: "marker",
-    blurb: "Selected work genomes. Step forward along the strand.",
-  },
-  {
-    id: "alfred",
-    region: "PROJECTS",
-    year: "2024",
-    name: "ALFRED",
-    sync: "LOCKED",
-    locked: true,
-    blurb: "Selected work — Alfred. Coming soon.",
-  },
-  {
-    id: "site",
-    region: "PROJECTS",
-    year: "2026",
-    name: "CIFTCI.DEV",
-    sync: "LIVE",
-    href: "https://ciftci.dev/",
-    blurb: "Personal site. Selected work.",
-  },
-  {
-    id: "robotics",
-    region: "PROJECTS",
-    year: "—",
-    name: "ROBOTICS",
-    sync: "LOCKED",
-    locked: true,
-    blurb: "Selected work — Robotics. Coming soon.",
-  },
-  {
-    id: "games",
-    region: "PROJECTS",
-    year: "—",
-    name: "GAMES",
-    sync: "LOCKED",
-    locked: true,
-    blurb: "Selected work — Games. Coming soon.",
-  },
+/** Strand items are genes. Hex plates are nucleotides; some genes expose selectable ones. */
+const GENES = [
   {
     id: "about",
     region: "ABOUT",
     year: "NOW",
-    name: "ABOUT",
+    name: "ORIGIN",
     sync: "BIO",
     blurb:
       "Computer engineering student split between Torino and Istanbul. I write software, tinker with robots, and ship small games — learning by building, then building again.",
@@ -61,40 +17,68 @@ const GENOMES = [
     ],
   },
   {
-    id: "contact",
-    region: "CONTACT",
-    year: "SEQ",
-    name: "CONTACT",
-    sync: "GEN",
-    kind: "marker",
-    blurb: "Secondary genomes — find me online.",
+    id: "alfred",
+    region: "WORK",
+    year: "2024",
+    name: "ALFRED",
+    sync: "LOCKED",
+    locked: true,
+    blurb: "Selected work — Alfred. Coming soon.",
   },
   {
-    id: "github",
-    region: "CONTACT",
-    year: "NOW",
-    name: "GITHUB",
-    sync: "OPEN",
-    href: "https://github.com/benbaranciftci",
-    blurb: "Find me — GitHub · benbaranciftci",
+    id: "site",
+    region: "WORK",
+    year: "2026",
+    name: "CIFTCI.DEV",
+    sync: "LIVE",
+    href: "https://ciftci.dev/",
+    blurb: "Personal site. Selected work.",
   },
   {
-    id: "linkedin",
-    region: "CONTACT",
-    year: "NOW",
-    name: "LINKEDIN",
-    sync: "OPEN",
-    href: "https://www.linkedin.com/in/baran-%C3%A7ift%C3%A7i-a004b9283",
-    blurb: "Find me — LinkedIn · Baran Çiftçi",
+    id: "robotics",
+    region: "WORK",
+    year: "—",
+    name: "ROBOTICS",
+    sync: "LOCKED",
+    locked: true,
+    blurb: "Selected work — Robotics. Coming soon.",
   },
   {
-    id: "email",
+    id: "games",
+    region: "WORK",
+    year: "—",
+    name: "GAMES",
+    sync: "LOCKED",
+    locked: true,
+    blurb: "Selected work — Games. Coming soon.",
+  },
+  {
+    id: "signal",
     region: "CONTACT",
     year: "NOW",
-    name: "EMAIL",
+    name: "SIGNAL",
     sync: "OPEN",
-    href: "mailto:baran@ciftci.dev",
-    blurb: "Find me — Email · baran@ciftci.dev",
+    blurb: "Ways to reach me — pick a nucleotide on the strand.",
+    nucleotides: [
+      {
+        id: "github",
+        name: "GITHUB",
+        blurb: "GitHub · benbaranciftci",
+        href: "https://github.com/benbaranciftci",
+      },
+      {
+        id: "linkedin",
+        name: "LINKEDIN",
+        blurb: "LinkedIn · Baran Çiftçi",
+        href: "https://www.linkedin.com/in/baran-%C3%A7ift%C3%A7i-a004b9283",
+      },
+      {
+        id: "email",
+        name: "EMAIL",
+        blurb: "Email · baran@ciftci.dev",
+        href: "mailto:baran@ciftci.dev",
+      },
+    ],
   },
 ];
 
@@ -120,11 +104,11 @@ const panelFacts = document.getElementById("panel-facts");
 const panelCta = document.getElementById("panel-cta");
 const panelKicker = document.getElementById("panel-kicker");
 const mount = document.getElementById("strand");
-const secBtns = [...document.querySelectorAll(".sec-btn[data-jump]")];
 
 let selected = 0;
 let cursor = 0;
 let opened = false;
+let nucIndex = 0;
 let browsing = false;
 let unfold = reduceMotion ? 1 : 0;
 let unfoldTarget = 1;
@@ -140,7 +124,7 @@ const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0xe8e2ef, 12, 40);
 
 const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
-camera.position.set(0.15, 0.25, 17);
+camera.position.set(0.15, 0.25, 19);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -181,6 +165,14 @@ const plates = [];
 const edges = [];
 const geneMarkers = [];
 
+function currentGene() {
+  return GENES[selected];
+}
+
+function geneNucs(g = currentGene()) {
+  return g.nucleotides || null;
+}
+
 function makeCurve(openAmt) {
   const pts = [];
   const n = 22;
@@ -206,8 +198,34 @@ function rebuildCurve(openAmt) {
   frames = curve.computeFrenetFrames(PLATE_COUNT, false);
 }
 
-function genomeT(i) {
-  return (i + 0.5) / GENOMES.length;
+function geneT(i) {
+  return (i + 0.5) / GENES.length;
+}
+
+function geneFromT(t) {
+  let best = 0;
+  let bestD = Infinity;
+  for (let i = 0; i < GENES.length; i++) {
+    const d = Math.abs(geneT(i) - t);
+    if (d < bestD) {
+      bestD = d;
+      best = i;
+    }
+  }
+  return best;
+}
+
+/** Plate indices that stand in as nucleotides for an opened gene. */
+function nucleotidePlateIds(gi, count) {
+  const t0 = gi / GENES.length;
+  const t1 = (gi + 1) / GENES.length;
+  const ids = [];
+  for (let n = 0; n < count; n++) {
+    const u = count === 1 ? 0.5 : (n + 0.5) / count;
+    const t = THREE.MathUtils.lerp(t0 + 0.08 * (t1 - t0), t1 - 0.08 * (t1 - t0), u);
+    ids.push(Math.round(t * (PLATE_COUNT - 1)));
+  }
+  return ids;
 }
 
 function ensurePlates() {
@@ -239,7 +257,7 @@ function ensurePlates() {
   }
 
   const g = new THREE.BoxGeometry(0.14, 0.14, 0.14);
-  GENOMES.forEach((_, i) => {
+  GENES.forEach((_, i) => {
     const m = new THREE.Mesh(
       g,
       new THREE.MeshBasicMaterial({
@@ -249,7 +267,7 @@ function ensurePlates() {
       })
     );
     m.rotation.z = Math.PI / 4;
-    m.userData.genome = i;
+    m.userData.gene = i;
     root.add(m);
     geneMarkers.push(m);
   });
@@ -318,10 +336,12 @@ function orient(obj, tan, normal, binormal) {
 function layout() {
   rebuildCurve(unfold);
   ensurePlates();
-  const selT = genomeT(cursor);
+  const selT = geneT(cursor);
   const { ts, weights, sumW } = warpedTs(selT, spread);
   const avgW = sumW / (PLATE_COUNT - 1);
   const visible = Math.floor(PLATE_COUNT * Math.max(0.12, unfold));
+  const nucs = opened ? geneNucs() : null;
+  const nucPlates = nucs ? nucleotidePlateIds(selected, nucs.length) : null;
 
   for (let i = 0; i < PLATE_COUNT; i++) {
     const mesh = plates[i];
@@ -337,7 +357,10 @@ function layout() {
     const frame = sampleAt(ts[i]);
     const pos = frame.pos.clone();
     const nearT = Math.abs(frame.t - selT);
-    const hot = nearT < 0.038;
+    const nucSlot = nucPlates ? nucPlates.indexOf(i) : -1;
+    const isNuc = nucSlot >= 0;
+    const isActiveNuc = isNuc && nucSlot === nucIndex;
+    const hot = nearT < 0.038 || isActiveNuc;
 
     if (flare > 0.01 && nearT < 0.13) {
       const g = 1 - nearT / 0.13;
@@ -345,11 +368,15 @@ function layout() {
       pos.addScaledVector(frame.binormal, side * g * g * flare * 1.75);
     }
 
+    if (isNuc) {
+      pos.addScaledVector(frame.binormal, isActiveNuc ? 0.55 : 0.28);
+    }
+
     const gap = i < PLATE_COUNT - 1 ? weights[i] / avgW : 1;
     const s =
       (0.72 + unfold * 0.48) *
       (0.88 + Math.min(2.6, gap) * 0.17) *
-      (hot ? 1.16 + Math.sin(performance.now() * 0.004) * 0.03 : 1);
+      (isActiveNuc ? 1.45 : isNuc ? 1.22 : hot ? 1.16 + Math.sin(performance.now() * 0.004) * 0.03 : 1);
 
     mesh.position.copy(pos);
     line.position.copy(pos);
@@ -358,7 +385,17 @@ function layout() {
     mesh.scale.setScalar(s);
     line.scale.setScalar(s);
 
-    if (hot) {
+    if (isActiveNuc) {
+      mesh.material.color.setHex(ACCENT);
+      mesh.material.opacity = 0.72;
+      line.material.color.setHex(ACCENT_HOT);
+      line.material.opacity = 1;
+    } else if (isNuc) {
+      mesh.material.color.setHex(ACCENT_HOT);
+      mesh.material.opacity = 0.38;
+      line.material.color.setHex(ACCENT);
+      line.material.opacity = 0.95;
+    } else if (hot) {
       mesh.material.color.setHex(ACCENT);
       mesh.material.opacity = 0.5;
       line.material.color.setHex(ACCENT_HOT);
@@ -371,20 +408,29 @@ function layout() {
     }
   }
 
-  GENOMES.forEach((_, gi) => {
+  GENES.forEach((gene, gi) => {
     const m = geneMarkers[gi];
-    const frame = sampleAt(genomeT(gi));
+    const frame = sampleAt(geneT(gi));
     m.position.copy(frame.pos);
     const active = Math.round(cursor) === gi;
-    m.scale.setScalar(active ? 1.35 : GENOMES[gi].kind === "marker" ? 1.1 : 0.85);
-    m.material.color.setHex(active ? ACCENT : GENOMES[gi].kind === "marker" ? ACCENT_HOT : 0xffffff);
+    const hasNucs = !!gene.nucleotides?.length;
+    m.scale.setScalar(active ? 1.35 : hasNucs ? 1.05 : 0.85);
+    m.material.color.setHex(active ? ACCENT : hasNucs ? ACCENT_HOT : 0xffffff);
     m.material.opacity = 0.55 + unfold * 0.45;
   });
 }
 
 function projectMarker() {
   if (!curve) return;
-  const frame = sampleAt(genomeT(cursor));
+  const nucs = opened ? geneNucs() : null;
+  let frame;
+  if (nucs) {
+    const ids = nucleotidePlateIds(selected, nucs.length);
+    const pi = ids[nucIndex] ?? ids[0];
+    frame = sampleAt(pi / (PLATE_COUNT - 1));
+  } else {
+    frame = sampleAt(geneT(cursor));
+  }
   _tmp.copy(frame.pos).project(camera);
   marker.style.left = `${(_tmp.x * 0.5 + 0.5) * innerWidth}px`;
   marker.style.top = `${(-_tmp.y * 0.5 + 0.5) * innerHeight}px`;
@@ -410,20 +456,34 @@ function addDecor() {
   }
 }
 
-function fillFacts(m) {
-  if (!m.facts?.length) {
+function fillFacts(g) {
+  if (!g.facts?.length) {
     panelFacts.hidden = true;
     panelFacts.innerHTML = "";
     return;
   }
   panelFacts.hidden = false;
-  panelFacts.innerHTML = m.facts
+  panelFacts.innerHTML = g.facts
     .map(([dt, dd]) => `<div><dt>${dt}</dt><dd>${dd}</dd></div>`)
     .join("");
 }
 
+function setCta(href) {
+  if (!href) {
+    panelCta.hidden = true;
+    return;
+  }
+  panelCta.hidden = false;
+  panelCta.href = href;
+  panelCta.target = href.startsWith("http") ? "_blank" : "_self";
+  panelCta.rel = href.startsWith("http") ? "noopener noreferrer" : "";
+  panelCta.textContent = "Enter";
+}
+
 function updateHud(instant) {
-  const m = GENOMES[Math.round(cursor)];
+  const g = currentGene();
+  const nucs = opened ? geneNucs(g) : null;
+  const nuc = nucs ? nucs[nucIndex] : null;
   if (!instant) {
     hudTl.classList.remove("flash");
     syncBox.classList.remove("flash");
@@ -431,59 +491,74 @@ function updateHud(instant) {
     hudTl.classList.add("flash");
     syncBox.classList.add("flash");
   }
-  yearEl.textContent = m.year;
-  nameEl.textContent = m.name;
-  syncLabel.textContent = m.kind === "marker" ? "SEQ" : "GEN";
-  syncVal.textContent = String(Math.round(cursor) + 1).padStart(2, "0");
-  regionLabel.textContent = m.region;
-  regionSub.textContent = m.region === "CONTACT" ? "SECONDARY" : "GENOMES";
-  hintEl.textContent = opened
-    ? "Esc closes"
-    : m.locked
-      ? "Locked nucleotide"
-      : "Enter opens this nucleotide";
-  hintEl.classList.toggle("locked", !!m.locked);
-  selected = Math.round(cursor);
-
-  secBtns.forEach((btn) => {
-    const jump = btn.dataset.jump;
-    const on =
-      (jump === "projects" && m.region === "PROJECTS") ||
-      (jump === "about" && m.region === "ABOUT") ||
-      (jump === "contact" && m.region === "CONTACT");
-    btn.classList.toggle("is-active", on);
-  });
+  yearEl.textContent = g.year;
+  nameEl.textContent = nuc ? nuc.name : g.name;
+  if (nuc) {
+    syncLabel.textContent = "NUC";
+    syncVal.textContent = String(nucIndex + 1).padStart(2, "0");
+    regionSub.textContent = "NUCLEOTIDE";
+  } else {
+    syncLabel.textContent = "GEN";
+    syncVal.textContent = String(selected + 1).padStart(2, "0");
+    regionSub.textContent = "GENE";
+  }
+  regionLabel.textContent = g.region;
+  if (opened && nucs) {
+    hintEl.textContent = "← → pick nucleotide · Enter opens";
+  } else if (opened) {
+    hintEl.textContent = "Esc closes gene";
+  } else if (g.locked) {
+    hintEl.textContent = "Locked gene";
+  } else if (geneNucs(g)) {
+    hintEl.textContent = "Enter opens gene · browse nucleotides";
+  } else {
+    hintEl.textContent = "Enter opens this gene";
+  }
+  hintEl.classList.toggle("locked", !!g.locked && !opened);
 }
 
-function syncPanel(m) {
-  panelKicker.textContent = m.kind === "marker" ? "Sequence" : "Nucleotide";
-  panelTitle.textContent = m.name;
-  panelBody.textContent = m.blurb;
-  fillFacts(m);
-  if (m.locked || !m.href) {
-    panelCta.hidden = true;
-  } else {
-    panelCta.hidden = false;
-    panelCta.href = m.href;
-    panelCta.target = m.href.startsWith("http") ? "_blank" : "_self";
-    panelCta.rel = m.href.startsWith("http") ? "noopener noreferrer" : "";
-    panelCta.textContent = "Enter";
+function syncPanel() {
+  const g = currentGene();
+  const nucs = geneNucs(g);
+  if (opened && nucs) {
+    const nuc = nucs[nucIndex];
+    panelKicker.textContent = "Nucleotide";
+    panelTitle.textContent = nuc.name;
+    panelBody.textContent = nuc.blurb;
+    panelFacts.hidden = true;
+    panelFacts.innerHTML = "";
+    setCta(nuc.href);
+    return;
   }
+  panelKicker.textContent = "Gene";
+  panelTitle.textContent = g.name;
+  panelBody.textContent = g.blurb;
+  fillFacts(g);
+  if (g.locked || !g.href) setCta(null);
+  else setCta(g.href);
 }
 
 function openPanel() {
-  const m = GENOMES[Math.round(cursor)];
+  const g = currentGene();
+  if (g.locked) {
+    hudTl.classList.remove("deny");
+    void hudTl.offsetWidth;
+    hudTl.classList.add("deny");
+    return;
+  }
   opened = true;
+  nucIndex = 0;
   flareTarget = 1;
   spreadTarget = 1;
   panel.hidden = false;
   requestAnimationFrame(() => panel.classList.add("is-open"));
-  syncPanel(m);
+  syncPanel();
   updateHud(true);
 }
 
 function closePanel() {
   opened = false;
+  nucIndex = 0;
   flareTarget = 0;
   spreadTarget = browsing ? 1 : 0.3;
   panel.classList.remove("is-open");
@@ -498,33 +573,48 @@ function togglePanel() {
   else openPanel();
 }
 
+function setNuc(i) {
+  const nucs = geneNucs();
+  if (!nucs?.length) return;
+  const next = Math.max(0, Math.min(nucs.length - 1, i));
+  if (next === nucIndex) return;
+  nucIndex = next;
+  flareTarget = 0.7;
+  setTimeout(() => {
+    if (opened) flareTarget = 1;
+  }, 180);
+  syncPanel();
+  updateHud(false);
+}
+
+function pulseTravel() {
+  if (reduceMotion) return;
+  flareTarget = 0.55;
+  spreadTarget = 1;
+  setTimeout(() => {
+    if (!opened) flareTarget = 0;
+  }, 220);
+}
+
 function setTarget(i) {
-  const next = Math.max(0, Math.min(GENOMES.length - 1, i));
-  if (next !== selected) updateHud(false);
+  const next = Math.max(0, Math.min(GENES.length - 1, i));
+  if (next === selected) return;
+  if (opened) closePanel();
   selected = next;
+  pulseTravel();
   if (reduceMotion) {
     cursor = next;
     updateHud(true);
-  }
-  if (opened) syncPanel(GENOMES[next]);
-}
-
-function jumpRegion(regionKey) {
-  const map = { projects: "PROJECTS", about: "ABOUT", contact: "CONTACT" };
-  const region = map[regionKey];
-  const idx = GENOMES.findIndex((g) => g.region === region);
-  if (idx >= 0) {
-    setTarget(idx);
-    cursor = idx;
-    spreadTarget = 1;
+  } else {
+    updateHud(false);
   }
 }
 
 function pickFromPointer(clientX, clientY) {
   const rect = renderer.domElement.getBoundingClientRect();
+  const v = new THREE.Vector3();
   let best = 0;
   let bestD = Infinity;
-  const v = new THREE.Vector3();
   for (let i = 0; i < geneMarkers.length; i++) {
     v.copy(geneMarkers[i].position).project(camera);
     const sx = (v.x * 0.5 + 0.5) * rect.width;
@@ -548,25 +638,46 @@ function pickFromPointer(clientX, clientY) {
       plateBest = i;
     }
   }
-  if (bestD < 50) return { genome: best, dist: bestD };
+
+  const nucs = opened ? geneNucs() : null;
+  if (nucs) {
+    const ids = nucleotidePlateIds(selected, nucs.length);
+    let nucBest = 0;
+    let nucD = Infinity;
+    ids.forEach((pi, ni) => {
+      v.copy(plates[pi].position).project(camera);
+      const sx = (v.x * 0.5 + 0.5) * rect.width;
+      const sy = (-v.y * 0.5 + 0.5) * rect.height;
+      const d = Math.hypot(sx - (clientX - rect.left), sy - (clientY - rect.top));
+      if (d < nucD) {
+        nucD = d;
+        nucBest = ni;
+      }
+    });
+    return { gene: selected, nuc: nucBest, dist: Math.min(nucD, plateD), mode: "nuc" };
+  }
+
+  if (bestD < 50) return { gene: best, dist: bestD, mode: "gene" };
   const t = plateBest / (PLATE_COUNT - 1);
-  const genome = Math.round(t * (GENOMES.length - 1));
-  return { genome, dist: plateD };
+  return { gene: geneFromT(t), dist: plateD, mode: "gene" };
 }
 
 function onPointerMove(e) {
   if (unfold < 0.4) return;
   const pick = pickFromPointer(e.clientX, e.clientY);
-  browsing = pick.dist < 110;
+  browsing = pick.dist < 120;
   spreadTarget = browsing || opened ? 1 : 0.3;
   renderer.domElement.style.cursor = browsing ? "ew-resize" : "default";
-  if (browsing) {
-    cursor = pick.genome;
-    if (Math.round(cursor) !== selected) {
-      selected = Math.round(cursor);
-      updateHud(false);
-      if (opened) syncPanel(GENOMES[selected]);
-    }
+
+  if (!browsing) return;
+
+  if (opened && pick.mode === "nuc" && pick.nuc != null) {
+    if (pick.nuc !== nucIndex) setNuc(pick.nuc);
+    return;
+  }
+
+  if (!opened && pick.gene !== selected) {
+    setTarget(pick.gene);
   }
 }
 
@@ -574,44 +685,78 @@ function onPointerLeave() {
   browsing = false;
   spreadTarget = opened ? 0.85 : 0.25;
   renderer.domElement.style.cursor = "default";
-  if (!opened) cursor = selected;
 }
 
 function onClick(e) {
   if (unfold < 0.6) return;
   const pick = pickFromPointer(e.clientX, e.clientY);
-  if (pick.dist > 130) {
+  if (pick.dist > 140) {
     if (opened) closePanel();
     return;
   }
-  setTarget(pick.genome);
-  cursor = pick.genome;
-  togglePanel();
+
+  if (opened && pick.mode === "nuc") {
+    setNuc(pick.nuc);
+    const nuc = geneNucs()?.[nucIndex];
+    if (nuc?.href) window.open(nuc.href, nuc.href.startsWith("http") ? "_blank" : "_self");
+    return;
+  }
+
+  const same = pick.gene === selected;
+  setTarget(pick.gene);
+  if (reduceMotion) cursor = pick.gene;
+  if (same) togglePanel();
+  else openPanel();
 }
+
+let wheelLock = 0;
+let wheelLastDir = 0;
+const WHEEL_COOLDOWN_MS = 280;
 
 function onWheel(e) {
   e.preventDefault();
   if (unfold < 0.4) return;
-  const dir = e.deltaY > 0 || e.deltaX > 0 ? 1 : -1;
+  // Dominant axis — avoids trackpad diagonal flipping scroll-up into scroll-down
+  const useY = Math.abs(e.deltaY) >= Math.abs(e.deltaX);
+  const delta = useY ? e.deltaY : e.deltaX;
+  if (Math.abs(delta) < 1.5) return;
+  const dir = delta > 0 ? 1 : -1;
+  const now = performance.now();
+  // Allow immediate reverse; only throttle repeats in the same direction
+  if (dir === wheelLastDir && now < wheelLock) return;
+  wheelLastDir = dir;
+  wheelLock = now + WHEEL_COOLDOWN_MS;
+  if (opened && geneNucs()) {
+    setNuc(nucIndex + dir);
+    return;
+  }
   setTarget(selected + dir);
-  cursor = selected;
   spreadTarget = 1;
 }
 
 function onKey(e) {
   if (e.key === "ArrowRight" || e.key === "ArrowDown") {
     e.preventDefault();
-    setTarget(selected + 1);
-    cursor = selected;
-    spreadTarget = 1;
+    if (opened && geneNucs()) setNuc(nucIndex + 1);
+    else {
+      setTarget(selected + 1);
+      spreadTarget = 1;
+    }
   } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
     e.preventDefault();
-    setTarget(selected - 1);
-    cursor = selected;
-    spreadTarget = 1;
+    if (opened && geneNucs()) setNuc(nucIndex - 1);
+    else {
+      setTarget(selected - 1);
+      spreadTarget = 1;
+    }
   } else if (e.key === "Enter" || e.key === " ") {
     e.preventDefault();
-    togglePanel();
+    if (opened && geneNucs()) {
+      const nuc = geneNucs()[nucIndex];
+      if (nuc?.href) window.open(nuc.href, nuc.href.startsWith("http") ? "_blank" : "_self");
+    } else {
+      togglePanel();
+    }
   } else if (e.key === "Escape") {
     e.preventDefault();
     if (opened) closePanel();
@@ -639,9 +784,12 @@ function tick(now) {
   flare += (flareTarget - flare) * (reduceMotion ? 1 : 0.1);
   spread += (spreadTarget - spread) * (reduceMotion ? 1 : 0.12);
 
-  if (!browsing && !reduceMotion) {
-    cursor += (selected - cursor) * 0.14;
+  // Always lerp — including mouse browse — so gene changes travel along the strand
+  if (!reduceMotion) {
+    cursor += (selected - cursor) * (browsing ? 0.16 : 0.1);
     if (Math.abs(selected - cursor) < 0.001) cursor = selected;
+  } else {
+    cursor = selected;
   }
 
   const t = now * 0.00028;
@@ -661,21 +809,29 @@ function tick(now) {
   requestAnimationFrame(tick);
 }
 
-secBtns.forEach((btn) => {
-  btn.addEventListener("click", () => jumpRegion(btn.dataset.jump));
-});
 document.getElementById("panel-close").addEventListener("click", closePanel);
 document.getElementById("btn-prev").addEventListener("click", () => {
-  setTarget(selected - 1);
-  cursor = selected;
-  spreadTarget = 1;
+  if (opened && geneNucs()) setNuc(nucIndex - 1);
+  else {
+    setTarget(selected - 1);
+    spreadTarget = 1;
+  }
 });
 document.getElementById("btn-next").addEventListener("click", () => {
-  setTarget(selected + 1);
-  cursor = selected;
-  spreadTarget = 1;
+  if (opened && geneNucs()) setNuc(nucIndex + 1);
+  else {
+    setTarget(selected + 1);
+    spreadTarget = 1;
+  }
 });
-document.getElementById("btn-select").addEventListener("click", togglePanel);
+document.getElementById("btn-select").addEventListener("click", () => {
+  if (opened && geneNucs()) {
+    const nuc = geneNucs()[nucIndex];
+    if (nuc?.href) window.open(nuc.href, nuc.href.startsWith("http") ? "_blank" : "_self");
+  } else {
+    togglePanel();
+  }
+});
 document.getElementById("btn-back").addEventListener("click", () => {
   if (opened) closePanel();
   else {
