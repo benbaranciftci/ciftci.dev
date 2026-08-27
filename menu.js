@@ -86,32 +86,110 @@ const GENES = [
     year: "NOW",
     name: "contact",
     sync: "OPEN",
-    blurb: "Ways to reach me — pick a nucleotide on the strand.",
+    blurb: "Ways to reach me — scroll or use → to switch.",
     nucleotides: [
       {
         id: "github",
         name: "GitHub",
         blurb: "GitHub · benbaranciftci",
         href: "https://github.com/benbaranciftci",
+        cta: "Open GitHub",
       },
       {
         id: "linkedin",
         name: "LinkedIn",
         blurb: "LinkedIn · Baran Çiftçi",
         href: "https://www.linkedin.com/in/baran-%C3%A7ift%C3%A7i-a004b9283",
+        cta: "Open LinkedIn",
       },
       {
         id: "email",
         name: "Email",
         blurb: "Email · baran@ciftci.dev",
         href: "mailto:baran@ciftci.dev",
+        cta: "Send email",
       },
     ],
   },
 ];
 
-const ACCENT = 0x8b4de8;
-const ACCENT_HOT = 0xb07aff;
+const ACCENT_THEMES = {
+  light: {
+    accent: 0x7113d7,
+    accentHot: 0x9b4aef,
+    fog: 0xe8e2ef,
+    fogNear: 12,
+    fogFar: 40,
+    ambient: 1.15,
+    key: 0xffffff,
+    keyI: 0.45,
+    h: 0.72,
+    sMesh: 0.05,
+    sLine: 0.04,
+    padL0: 0.72,
+    padL1: 0.06,
+    contentL0: 0.08,
+    contentL1: 0.78,
+    meshOp: 0.12,
+    lineOp: 0.72,
+    contentOp: 0.05,
+    contentOpU: 0.14,
+    contentLineOp: 0.28,
+    contentLineOpU: 0.55,
+    padOp: 0.85,
+    padLine: 0.18,
+    padLineU: 0.4,
+    lineLift: 0.14,
+    lineCap: 0.96,
+    padLift: 0.12,
+    padCap: 0.9,
+    decor: 0xffffff,
+    decorOp: 0.12,
+  },
+  dark: {
+    accent: 0x8b4de8,
+    accentHot: 0xb07aff,
+    fog: 0x2a2730,
+    fogNear: 14,
+    fogFar: 42,
+    ambient: 0.95,
+    key: 0xe8d8ff,
+    keyI: 0.4,
+    h: 0.74,
+    sMesh: 0.08,
+    sLine: 0.1,
+    padL0: 0.62,
+    padL1: 0.14,
+    contentL0: 0.18,
+    contentL1: 0.52,
+    meshOp: 0.14,
+    lineOp: 0.65,
+    contentOp: 0.08,
+    contentOpU: 0.16,
+    contentLineOp: 0.22,
+    contentLineOpU: 0.5,
+    padOp: 0.8,
+    padLine: 0.14,
+    padLineU: 0.36,
+    lineLift: 0.18,
+    lineCap: 0.88,
+    padLift: 0.16,
+    padCap: 0.82,
+    decor: 0xcbb8ef,
+    decorOp: 0.1,
+  },
+};
+
+function readTheme() {
+  const attr = document.documentElement.getAttribute("data-theme");
+  if (attr === "dark" || attr === "light") return attr;
+  return "light";
+}
+
+let themeName = readTheme();
+let theme = ACCENT_THEMES[themeName];
+let ACCENT = theme.accent;
+let ACCENT_HOT = theme.accentHot;
 const PAD_EACH = 16;
 const CURVE_SAMPLES = 180;
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -168,7 +246,7 @@ let secHeightPx = 0;
 let worldSecs = [];
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x2a2730, 14, 42);
+scene.fog = new THREE.Fog(theme.fog, theme.fogNear, theme.fogFar);
 
 const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
 camera.position.set(0.2, 0.35, 18.5);
@@ -180,8 +258,9 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setClearColor(0x000000, 0);
 mount.appendChild(renderer.domElement);
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.95));
-const key = new THREE.DirectionalLight(0xe8d8ff, 0.4);
+const ambient = new THREE.AmbientLight(0xffffff, theme.ambient);
+scene.add(ambient);
+const key = new THREE.DirectionalLight(theme.key, theme.keyI);
 key.position.set(5, 10, 12);
 scene.add(key);
 
@@ -231,6 +310,13 @@ function currentGene() {
 
 function geneNucs(g = currentGene()) {
   return g.nucleotides || null;
+}
+
+function ctaLabelFor(nuc) {
+  if (!nuc) return "Enter";
+  if (nuc.cta) return nuc.cta;
+  if (nuc.href?.startsWith("mailto:")) return "Send email";
+  return nuc.name ? `Open ${nuc.name}` : "Enter";
 }
 
 function makeCurve(openAmt) {
@@ -331,7 +417,7 @@ function orient(obj, tan, normal, binormal) {
 function hexStyle(hexIdx, focus, isPad) {
   const offset = hexIdx - focus;
   const along = THREE.MathUtils.clamp((hexIdx + PAD_EACH) / (CONTENT_COUNT + PAD_EACH * 2), 0, 1);
-  const baseL = THREE.MathUtils.lerp(0.62, 0.14, along);
+  const baseL = THREE.MathUtils.lerp(theme.padL0, theme.padL1, along);
   const rim = Math.abs(offset) / (PAD_EACH + CONTENT_COUNT * 0.35);
   const fade = 1 - Math.pow(Math.max(0, rim - 0.55) / 0.45, 1.15);
   return { fade: Math.max(0, fade), L: baseL * Math.max(0, fade), isPad };
@@ -339,9 +425,9 @@ function hexStyle(hexIdx, focus, isPad) {
 
 function makeHexEntry(kind, meta) {
   const mat = new THREE.MeshBasicMaterial({
-    color: new THREE.Color().setHSL(0.74, 0.08, 0.42),
+    color: new THREE.Color().setHSL(theme.h, theme.sMesh, 0.5),
     transparent: true,
-    opacity: 0.14,
+    opacity: theme.meshOp,
     side: THREE.DoubleSide,
     depthWrite: false,
   });
@@ -349,9 +435,9 @@ function makeHexEntry(kind, meta) {
   mesh.userData = { ...meta, kind };
   root.add(mesh);
   const lm = new THREE.LineBasicMaterial({
-    color: new THREE.Color().setHSL(0.74, 0.1, 0.72),
+    color: new THREE.Color().setHSL(theme.h, theme.sLine, 0.82),
     transparent: true,
-    opacity: 0.65,
+    opacity: theme.lineOp,
   });
   const line = new THREE.LineSegments(edgeGeo, lm);
   root.add(line);
@@ -362,7 +448,7 @@ function ensureHexes() {
   if (contentHexes.length) return;
   CONTENT.forEach(({ gene, slot, contentIdx }) => {
     const shade = contentIdx / Math.max(1, CONTENT_COUNT - 1);
-    const L = 0.18 + shade * 0.52;
+    const L = theme.contentL0 + shade * theme.contentL1;
     const { mesh, line } = makeHexEntry("content", { gene, slot, contentIdx });
     mesh.userData.baseL = L;
     line.userData.baseL = L;
@@ -427,25 +513,35 @@ function layoutHex(entry, hexIdx, focus, style) {
     line.material.color.setHex(a > 0.65 ? ACCENT_HOT : ACCENT);
     line.material.opacity = THREE.MathUtils.lerp(0.95, 1, a);
   } else if (isNuc) {
+    const isNeighbor = Math.abs(slotIdx - nucIndex) === 1;
+    const pulse =
+      isNeighbor && !reduceMotion
+        ? 0.5 + 0.5 * Math.sin(performance.now() * 0.005 + slotIdx)
+        : 0;
     mesh.material.color.setHex(ACCENT_HOT);
-    mesh.material.opacity = 0.38;
+    mesh.material.opacity = THREE.MathUtils.lerp(0.3, 0.4, pulse);
     line.material.color.setHex(ACCENT);
-    line.material.opacity = 0.95;
+    line.material.opacity = THREE.MathUtils.lerp(0.5, 1, pulse * 0.8);
+    if (pulse > 0) {
+      const bump = 1 + pulse * 0.08;
+      mesh.scale.setScalar(s * bump);
+      line.scale.setScalar(s * bump);
+    }
   } else if (hot) {
     mesh.material.color.setHex(ACCENT);
     mesh.material.opacity = 0.5;
     line.material.color.setHex(ACCENT_HOT);
     line.material.opacity = 1;
   } else if (isContent) {
-    mesh.material.color.setHSL(0.74, 0.1, ud.baseL);
-    mesh.material.opacity = Math.max(alpha, 0.08 + unfold * 0.16);
-    line.material.color.setHSL(0.74, 0.12, Math.min(0.88, ud.baseL + 0.18));
-    line.material.opacity = 0.22 + unfold * 0.5;
+    mesh.material.color.setHSL(theme.h, theme.sMesh, ud.baseL);
+    mesh.material.opacity = Math.max(alpha, theme.contentOp + unfold * theme.contentOpU);
+    line.material.color.setHSL(theme.h, theme.sLine, Math.min(theme.lineCap, ud.baseL + theme.lineLift));
+    line.material.opacity = theme.contentLineOp + unfold * theme.contentLineOpU;
   } else {
-    mesh.material.color.setHSL(0.74, 0.08, style.L);
-    mesh.material.opacity = alpha * 0.8;
-    line.material.color.setHSL(0.74, 0.1, Math.min(0.82, style.L + 0.16));
-    line.material.opacity = style.fade * (0.14 + unfold * 0.36);
+    mesh.material.color.setHSL(theme.h, theme.sMesh, style.L);
+    mesh.material.opacity = alpha * theme.padOp;
+    line.material.color.setHSL(theme.h, theme.sLine, Math.min(theme.padCap, style.L + theme.padLift));
+    line.material.opacity = style.fade * (theme.padLine + unfold * theme.padLineU);
   }
 
   mesh.visible = style.fade > 0.03 && unfold > 0.06;
@@ -479,7 +575,7 @@ function addDecor() {
   for (let i = 0; i < 30; i++) {
     const m = new THREE.Mesh(
       g,
-      new THREE.MeshBasicMaterial({ color: 0xcbb8ef, transparent: true, opacity: 0.1 })
+      new THREE.MeshBasicMaterial({ color: theme.decor, transparent: true, opacity: theme.decorOp })
     );
     m.position.set(
       (Math.random() - 0.5) * 20,
@@ -564,7 +660,7 @@ function fillFacts(g) {
     .join("");
 }
 
-function setCta(href) {
+function setCta(href, label = "Enter") {
   if (!href) {
     panelCta.hidden = true;
     panelCta.removeAttribute("href");
@@ -574,7 +670,7 @@ function setCta(href) {
   panelCta.href = href;
   panelCta.target = href.startsWith("http") ? "_blank" : "_self";
   panelCta.rel = href.startsWith("http") ? "noopener noreferrer" : "";
-  panelCta.textContent = "Enter";
+  panelCta.textContent = label;
 }
 
 function setLogo(logo, alt) {
@@ -601,20 +697,25 @@ function updateHud(instant) {
     syncBox.classList.add("flash");
   }
   if (nuc) {
-    syncLabel.textContent = "NUC";
-    syncVal.textContent = String(nucIndex + 1).padStart(2, "0");
+    syncLabel.textContent = "CONTACT";
+    syncVal.textContent = `${nucIndex + 1} / ${nucs.length}`;
   } else {
     syncLabel.textContent = "GEN";
     syncVal.textContent = String(selected + 1).padStart(2, "0");
   }
   if (opened && nucs) {
-    hintEl.textContent = "← → pick nucleotide · Enter opens";
+    const hasMore = nucIndex < nucs.length - 1;
+    const hasPrev = nucIndex > 0;
+    if (hasMore && hasPrev) hintEl.textContent = "Scroll or ← → for next · Enter opens link";
+    else if (hasMore) hintEl.textContent = "Scroll or → for next · Enter opens link";
+    else if (hasPrev) hintEl.textContent = "Scroll or ← for previous · Enter opens link";
+    else hintEl.textContent = "Enter opens link · Esc closes";
   } else if (opened) {
     hintEl.textContent = "Esc closes gene";
   } else if (g.locked) {
     hintEl.textContent = "Locked gene";
   } else if (geneNucs(g)) {
-    hintEl.textContent = "Enter opens gene · browse nucleotides";
+    hintEl.textContent = "Enter opens · then scroll between contacts";
   } else {
     hintEl.textContent = "Enter opens this gene";
   }
@@ -634,13 +735,13 @@ function syncPanel() {
   const nucs = geneNucs(g);
   if (opened && nucs) {
     const nuc = nucs[nucIndex];
-    panelKicker.textContent = "Nucleotide";
+    panelKicker.textContent = "Contact";
     panelTitle.textContent = nuc.name;
     panelBody.textContent = nuc.blurb;
     panelFacts.hidden = true;
     panelFacts.innerHTML = "";
     setLogo(null);
-    setCta(nuc.href);
+    setCta(nuc.href, ctaLabelFor(nuc));
     return;
   }
   panelKicker.textContent = "Gene";
@@ -649,7 +750,7 @@ function syncPanel() {
   fillFacts(g);
   setLogo(g.logo, g.logoAlt || g.name);
   if (!g.href) setCta(null);
-  else setCta(g.href);
+  else setCta(g.href, g.name ? `Open ${g.name}` : "Enter");
 }
 
 function openPanel() {
@@ -766,20 +867,7 @@ function onPointerMove(e) {
   const pick = pickFromPointer(e.clientX, e.clientY);
   browsing = pick.dist < 120 && pick.mode !== "miss";
   spreadTarget = browsing || opened ? 1 : 0.3;
-  renderer.domElement.style.cursor = browsing ? "ew-resize" : "default";
-
-  if (!browsing || pointerNavLocked()) return;
-
-  if (opened && geneNucs() && Math.abs(nucIndex - nucCursor) > 0.12) return;
-
-  if (opened && pick.mode === "nuc" && pick.nuc != null) {
-    if (pick.nuc !== nucIndex) setNuc(pick.nuc);
-    return;
-  }
-
-  if (!opened && pick.mode === "gene" && pick.gene !== selected) {
-    setTarget(pick.gene);
-  }
+  renderer.domElement.style.cursor = browsing ? "pointer" : "default";
 }
 
 function onPointerLeave() {
@@ -814,18 +902,9 @@ function onClick(e) {
 }
 
 let wheelLock = 0;
-let wheelLastDir = 0;
-let pointerNavLock = 0;
-const WHEEL_COOLDOWN_MS = 280;
-const POINTER_NAV_LOCK_MS = 320;
-
-function lockPointerNav() {
-  pointerNavLock = performance.now() + POINTER_NAV_LOCK_MS;
-}
-
-function pointerNavLocked() {
-  return performance.now() < pointerNavLock;
-}
+let wheelAccum = 0;
+const WHEEL_COOLDOWN_MS = 480;
+const WHEEL_STEP_PX = 90;
 
 function onWheel(e) {
   e.preventDefault();
@@ -834,13 +913,25 @@ function onWheel(e) {
   let delta = useY ? e.deltaY : e.deltaX;
   if (e.deltaMode === 1) delta *= 16;
   else if (e.deltaMode === 2) delta *= worldEl?.clientHeight || innerHeight;
-  if (Math.abs(delta) < 1.5) return;
-  const dir = delta > 0 ? 1 : -1;
+  if (Math.abs(delta) < 0.5) return;
+
   const now = performance.now();
-  if (dir === wheelLastDir && now < wheelLock) return;
-  wheelLastDir = dir;
+  if (now < wheelLock) {
+    wheelAccum = 0;
+    return;
+  }
+
+  // Reset leftover when direction flips so up/down need the same effort.
+  if (wheelAccum !== 0 && Math.sign(delta) !== Math.sign(wheelAccum)) {
+    wheelAccum = 0;
+  }
+  wheelAccum += delta;
+  if (Math.abs(wheelAccum) < WHEEL_STEP_PX) return;
+
+  const dir = wheelAccum > 0 ? 1 : -1;
+  wheelAccum = 0;
   wheelLock = now + WHEEL_COOLDOWN_MS;
-  lockPointerNav();
+
   if (opened && geneNucs()) {
     setNuc(nucIndex + dir);
     return;
@@ -852,7 +943,6 @@ function onWheel(e) {
 function onKey(e) {
   if (e.key === "ArrowRight" || e.key === "ArrowDown") {
     e.preventDefault();
-    lockPointerNav();
     if (opened && geneNucs()) setNuc(nucIndex + 1);
     else {
       setTarget(selected + 1);
@@ -860,7 +950,6 @@ function onKey(e) {
     }
   } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
     e.preventDefault();
-    lockPointerNav();
     if (opened && geneNucs()) setNuc(nucIndex - 1);
     else {
       setTarget(selected - 1);
@@ -942,7 +1031,6 @@ function tick(now) {
 
 document.getElementById("panel-close").addEventListener("click", closePanel);
 document.getElementById("btn-prev").addEventListener("click", () => {
-  lockPointerNav();
   if (opened && geneNucs()) setNuc(nucIndex - 1);
   else {
     setTarget(selected - 1);
@@ -950,7 +1038,6 @@ document.getElementById("btn-prev").addEventListener("click", () => {
   }
 });
 document.getElementById("btn-next").addEventListener("click", () => {
-  lockPointerNav();
   if (opened && geneNucs()) setNuc(nucIndex + 1);
   else {
     setTarget(selected + 1);
@@ -974,6 +1061,53 @@ document.getElementById("btn-back").addEventListener("click", () => {
     }, reduceMotion ? 0 : 420);
   }
 });
+
+const themeBtn = document.getElementById("btn-theme");
+
+function syncThemeButton() {
+  const dark = themeName === "dark";
+  themeBtn.textContent = dark ? "Light" : "Dark";
+  themeBtn.setAttribute("aria-pressed", dark ? "true" : "false");
+  themeBtn.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+}
+
+function applyTheme(next) {
+  themeName = next === "dark" ? "dark" : "light";
+  theme = ACCENT_THEMES[themeName];
+  ACCENT = theme.accent;
+  ACCENT_HOT = theme.accentHot;
+  document.documentElement.setAttribute("data-theme", themeName);
+  try {
+    localStorage.setItem("dna-theme", themeName);
+  } catch {
+    /* ignore */
+  }
+
+  scene.fog.color.setHex(theme.fog);
+  scene.fog.near = theme.fogNear;
+  scene.fog.far = theme.fogFar;
+  ambient.intensity = theme.ambient;
+  key.color.setHex(theme.key);
+  key.intensity = theme.keyI;
+
+  contentHexes.forEach((entry) => {
+    const shade = entry.mesh.userData.contentIdx / Math.max(1, CONTENT_COUNT - 1);
+    const L = theme.contentL0 + shade * theme.contentL1;
+    entry.mesh.userData.baseL = L;
+    entry.line.userData.baseL = L;
+  });
+  deco.children.forEach((m) => {
+    m.material.color.setHex(theme.decor);
+    m.material.opacity = theme.decorOp;
+  });
+
+  syncThemeButton();
+}
+
+themeBtn.addEventListener("click", () => {
+  applyTheme(themeName === "dark" ? "light" : "dark");
+});
+syncThemeButton();
 
 renderer.domElement.addEventListener("pointermove", onPointerMove);
 renderer.domElement.addEventListener("pointerleave", onPointerLeave);

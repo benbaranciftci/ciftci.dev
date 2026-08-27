@@ -1,13 +1,55 @@
 @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
 
 :root {
+  --bg: #e6e2eb;
+  --bg-mid: #fff;
+  --ink: #2a2433;
+  --mute: #6a6276;
+  --accent: #7113d7;
+  --accent-hot: #9b4aef;
+  --page-bg: linear-gradient(165deg, #f2eef7 0%, #e6e2eb 50%, #d9d2e4 100%);
+  --strand-bg: transparent;
+  --blurb: rgba(42, 36, 51, 0.72);
+  --rule: rgba(80, 60, 110, 0.22);
+  --sync-glow: rgba(113, 19, 215, 0.35);
+  --panel-bg: rgba(255, 255, 255, 0.72);
+  --panel-border: rgba(255, 255, 255, 0.85);
+  --panel-shadow: 0 12px 40px rgba(60, 30, 100, 0.12);
+  --line-soft: rgba(80, 60, 110, 0.12);
+  --line-logo: rgba(80, 60, 110, 0.18);
+  --bar-bg: rgba(255, 255, 255, 0.55);
+  --bar-border: rgba(255, 255, 255, 0.7);
+  --duo-fill: #fff;
+  --duo-border: rgba(80, 60, 110, 0.25);
+  --grain-opacity: 0.045;
+  --font: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+}
+
+html[data-theme="dark"] {
   --bg: #1c1922;
   --bg-mid: #25212e;
   --ink: #ebe6f3;
   --mute: #9a90ab;
   --accent: #8b4de8;
   --accent-hot: #b07aff;
-  --font: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --page-bg: #2a2730;
+  --strand-bg:
+    radial-gradient(ellipse 90% 55% at 12% -10%, rgba(113, 19, 215, 0.22), transparent 55%),
+    radial-gradient(ellipse 70% 45% at 92% 8%, rgba(103, 47, 163, 0.16), transparent 50%),
+    linear-gradient(180deg, #2a2730 0%, #302d33 40%, #2a2730 100%);
+  --blurb: rgba(232, 224, 242, 0.78);
+  --rule: rgba(240, 234, 246, 0.22);
+  --sync-glow: rgba(139, 77, 232, 0.28);
+  --panel-bg: rgba(28, 24, 36, 0.78);
+  --panel-border: rgba(235, 230, 243, 0.1);
+  --panel-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  --line-soft: rgba(235, 230, 243, 0.1);
+  --line-logo: rgba(235, 230, 243, 0.12);
+  --bar-bg: rgba(18, 15, 24, 0.72);
+  --bar-border: rgba(235, 230, 243, 0.08);
+  --duo-fill: #25212e;
+  --duo-border: rgba(235, 230, 243, 0.2);
+  --grain-opacity: 0.035;
 }
 
 *,
@@ -27,7 +69,7 @@ body {
 body.dna-body {
   font-family: var(--font);
   color: var(--ink);
-  background: #2a2730;
+  background: var(--page-bg);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
 }
@@ -45,7 +87,7 @@ body.dna-body {
   content: "";
   position: absolute;
   inset: 0;
-  opacity: 0.035;
+  opacity: var(--grain-opacity);
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 180px 180px;
   z-index: 1;
@@ -84,7 +126,7 @@ body.dna-body {
   font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #b8a4d4;
+  color: var(--accent);
 }
 
 .world-title {
@@ -92,14 +134,14 @@ body.dna-body {
   font-weight: 600;
   letter-spacing: -0.03em;
   line-height: 1.05;
-  color: #f3edf9;
+  color: var(--ink);
 }
 
 .world-year {
   font-size: 0.85rem;
   font-weight: 500;
   letter-spacing: 0.04em;
-  color: #c4b0dc;
+  color: var(--mute);
 }
 
 .world-blurb {
@@ -109,14 +151,14 @@ body.dna-body {
   font-weight: 400;
   letter-spacing: 0;
   line-height: 1.45;
-  color: rgba(232, 224, 242, 0.78);
+  color: var(--blurb);
 }
 
 .world-rule {
   width: min(16rem, 70%);
   height: 1px;
   margin-top: 1rem;
-  background: rgba(240, 234, 246, 0.22);
+  background: var(--rule);
 }
 
 .skip-link {
@@ -125,7 +167,7 @@ body.dna-body {
   top: 8px;
   left: 8px;
   padding: 8px 12px;
-  background: #0e0c12;
+  background: var(--ink);
   color: #fff;
   text-decoration: none;
   transform: translateY(-140%);
@@ -145,10 +187,7 @@ body.dna-body {
   touch-action: none;
   opacity: 1;
   pointer-events: auto;
-  background:
-    radial-gradient(ellipse 90% 55% at 12% -10%, rgba(113, 19, 215, 0.22), transparent 55%),
-    radial-gradient(ellipse 70% 45% at 92% 8%, rgba(103, 47, 163, 0.16), transparent 50%),
-    linear-gradient(180deg, #2a2730 0%, #302d33 40%, #2a2730 100%);
+  background: var(--strand-bg);
 }
 
 #strand canvas {
@@ -198,8 +237,8 @@ body.dna-body {
   background: linear-gradient(90deg, var(--accent), var(--accent-hot));
   color: #fff;
   padding: 0.65rem 1.1rem 0.55rem;
-  min-width: 5.5rem;
-  box-shadow: 0 0 28px rgba(139, 77, 232, 0.28);
+  min-width: 6.5rem;
+  box-shadow: 0 0 28px var(--sync-glow);
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
@@ -235,10 +274,10 @@ body.dna-body {
   top: 50%;
   width: min(22rem, calc(100vw - 2rem));
   padding: 1.35rem 1.5rem 1.5rem;
-  background: rgba(28, 24, 36, 0.78);
-  border: 1px solid rgba(235, 230, 243, 0.1);
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
   backdrop-filter: blur(14px);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--panel-shadow);
   transform: translateY(-50%) translateX(22px);
   opacity: 0;
   pointer-events: none;
@@ -277,7 +316,7 @@ body.dna-body {
   height: 3.25rem;
   padding: 0;
   background: #000;
-  border: 1px solid rgba(235, 230, 243, 0.12);
+  border: 1px solid var(--line-logo);
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -328,7 +367,7 @@ body.dna-body {
   gap: 0.65rem;
   margin: 0 0 1.15rem;
   padding: 0.85rem 0 0;
-  border-top: 1px solid rgba(235, 230, 243, 0.1);
+  border-top: 1px solid var(--line-soft);
 }
 
 .panel-facts div {
@@ -408,9 +447,9 @@ body.memory-open .hud-sync {
   justify-content: space-between;
   gap: 1rem;
   padding: 0 clamp(1rem, 3vw, 2rem);
-  background: rgba(18, 15, 24, 0.72);
+  background: var(--bar-bg);
   backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(235, 230, 243, 0.08);
+  border-top: 1px solid var(--bar-border);
   font-size: 0.75rem;
   font-weight: 400;
   letter-spacing: 0;
@@ -473,8 +512,8 @@ body.memory-open .hud-sync {
 .duo::after {
   right: 0;
   top: 3px;
-  background: var(--bg-mid);
-  border: 1px solid rgba(235, 230, 243, 0.2);
+  background: var(--duo-fill);
+  border: 1px solid var(--duo-border);
 }
 
 .leave {

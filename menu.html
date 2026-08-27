@@ -6,6 +6,22 @@
     <meta name="description" content="Baran Çiftçi — DNA menu." />
     <title>DNA · baran çiftçi</title>
     <link rel="icon" href="/favicon.svg?v=4" type="image/svg+xml" />
+    <script>
+      (() => {
+        try {
+          const saved = localStorage.getItem("dna-theme");
+          const theme =
+            saved === "dark" || saved === "light"
+              ? saved
+              : matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light";
+          document.documentElement.setAttribute("data-theme", theme);
+        } catch {
+          document.documentElement.setAttribute("data-theme", "light");
+        }
+      })();
+    </script>
     <link rel="stylesheet" href="menu.css" />
     <script type="importmap">
       {
@@ -49,6 +65,7 @@
         <span class="duo" aria-hidden="true"></span>
         <span>DNA</span>
         <a class="leave" href="/">Leave</a>
+        <button type="button" class="bar-btn" id="btn-theme" aria-pressed="false">Dark</button>
       </div>
       <div class="bar-right">
         <button type="button" class="bar-btn" id="btn-prev"><kbd>←</kbd> Prev</button>
