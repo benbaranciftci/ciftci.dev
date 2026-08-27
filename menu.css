@@ -1,11 +1,12 @@
 @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
 
 :root {
-  --bg: #e6e2eb;
-  --ink: #2a2433;
-  --mute: #6a6276;
-  --accent: #7113d7;
-  --accent-hot: #9b4aef;
+  --bg: #1c1922;
+  --bg-mid: #25212e;
+  --ink: #ebe6f3;
+  --mute: #9a90ab;
+  --accent: #8b4de8;
+  --accent-hot: #b07aff;
   --font: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
 }
 
@@ -26,9 +27,96 @@ body {
 body.dna-body {
   font-family: var(--font);
   color: var(--ink);
-  background: linear-gradient(165deg, #f2eef7 0%, var(--bg) 50%, #d9d2e4 100%);
+  background: #2a2730;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
+}
+
+#world {
+  position: fixed;
+  inset: 0 0 48px 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+  background: transparent;
+}
+
+#world::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.world-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
+
+.world-sec {
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  padding: clamp(4.5rem, 12vh, 7rem) clamp(1.25rem, 4vw, 3.5rem) 3rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.75rem;
+  max-width: min(28rem, 46vw);
+  opacity: 0.55;
+  transition: opacity 0.35s ease;
+  mask-image: linear-gradient(90deg, #000 0%, #000 62%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 62%, transparent 100%);
+}
+
+.world-kicker {
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #b8a4d4;
+}
+
+.world-title {
+  font-size: clamp(2.6rem, 7.5vw, 4.6rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: #f3edf9;
+}
+
+.world-year {
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: #c4b0dc;
+}
+
+.world-blurb {
+  margin-top: 0.55rem;
+  max-width: 22rem;
+  font-size: clamp(0.88rem, 1.6vw, 1.02rem);
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.45;
+  color: rgba(232, 224, 242, 0.78);
+}
+
+.world-rule {
+  width: min(16rem, 70%);
+  height: 1px;
+  margin-top: 1rem;
+  background: rgba(240, 234, 246, 0.22);
 }
 
 .skip-link {
@@ -37,7 +125,7 @@ body.dna-body {
   top: 8px;
   left: 8px;
   padding: 8px 12px;
-  background: var(--ink);
+  background: #0e0c12;
   color: #fff;
   text-decoration: none;
   transform: translateY(-140%);
@@ -57,6 +145,10 @@ body.dna-body {
   touch-action: none;
   opacity: 1;
   pointer-events: auto;
+  background:
+    radial-gradient(ellipse 90% 55% at 12% -10%, rgba(113, 19, 215, 0.22), transparent 55%),
+    radial-gradient(ellipse 70% 45% at 92% 8%, rgba(103, 47, 163, 0.16), transparent 50%),
+    linear-gradient(180deg, #2a2730 0%, #302d33 40%, #2a2730 100%);
 }
 
 #strand canvas {
@@ -68,58 +160,14 @@ body.dna-body {
 .hud {
   position: fixed;
   inset: 0;
-  z-index: 2;
+  z-index: 3;
   pointer-events: none;
 }
 
-.region-sub {
-  margin-top: 0.2rem;
-  opacity: 0.65;
-  font-size: 0.7rem;
-  font-weight: 400;
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.hud-tl {
-  position: absolute;
-  top: clamp(1.25rem, 4vh, 2.5rem);
-  left: clamp(1.25rem, 4vw, 2.75rem);
-}
-
-.hud-tl.flash .name,
-.hud-tl.flash .year {
-  animation: hud-pop 0.35s ease;
-}
-
-.hud-tl.deny {
-  animation: deny 0.35s ease;
-}
-
-.year {
-  font-size: 0.78rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: var(--mute);
-  margin-bottom: 0.15rem;
-}
-
-.year .arrow {
-  color: var(--accent);
-  font-weight: 700;
-  margin-right: 0.15rem;
-}
-
-.name {
-  font-size: clamp(1.85rem, 5vw, 3rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.05;
-  text-transform: none;
-}
-
 .hint {
-  margin-top: 0.55rem;
+  position: absolute;
+  left: clamp(1.25rem, 4vw, 2.75rem);
+  bottom: calc(48px + 1rem);
   max-width: 18rem;
   font-size: 0.8rem;
   font-weight: 400;
@@ -133,17 +181,25 @@ body.dna-body {
   color: var(--mute);
 }
 
+.hint.flash {
+  animation: hud-pop 0.35s ease;
+}
+
+.hint.deny {
+  animation: deny 0.35s ease;
+}
+
 .hud-sync {
   position: absolute;
   z-index: 5;
-  top: clamp(7.75rem, 20vh, 11.5rem);
-  bottom: auto;
-  left: clamp(1.25rem, 4vw, 2.75rem);
+  top: clamp(1.25rem, 4vh, 2.5rem);
+  right: clamp(1.25rem, 4vw, 2.75rem);
+  left: auto;
   background: linear-gradient(90deg, var(--accent), var(--accent-hot));
   color: #fff;
   padding: 0.65rem 1.1rem 0.55rem;
   min-width: 5.5rem;
-  box-shadow: 0 0 28px rgba(113, 19, 215, 0.35);
+  box-shadow: 0 0 28px rgba(139, 77, 232, 0.28);
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
@@ -152,6 +208,10 @@ body.dna-body {
 
 .hud-sync.flash {
   animation: hud-pop 0.35s ease;
+}
+
+.hud-sync.deny {
+  animation: deny 0.35s ease;
 }
 
 .sync-top {
@@ -168,42 +228,6 @@ body.dna-body {
   opacity: 0.9;
 }
 
-.hud-tr {
-  position: absolute;
-  top: clamp(1.25rem, 4vh, 2.5rem);
-  right: clamp(1.25rem, 4vw, 2.75rem);
-  text-align: right;
-  font-size: 0.68rem;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  color: var(--mute);
-  line-height: 1.35;
-  text-transform: uppercase;
-}
-
-.marker {
-  position: absolute;
-  width: 0;
-  height: 0;
-  opacity: 0;
-  transition: left 0.05s linear, top 0.05s linear, opacity 0.2s ease;
-  will-change: left, top;
-}
-
-.marker.on {
-  opacity: 1;
-}
-
-.marker.opened .marker-line {
-  height: 96px;
-  box-shadow: 0 0 18px rgba(155, 74, 239, 0.75);
-}
-
-.marker.opened .marker-diamond {
-  bottom: 96px;
-  background: var(--accent);
-}
-
 .memory-panel {
   position: fixed;
   z-index: 4;
@@ -211,10 +235,10 @@ body.dna-body {
   top: 50%;
   width: min(22rem, calc(100vw - 2rem));
   padding: 1.35rem 1.5rem 1.5rem;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: rgba(28, 24, 36, 0.78);
+  border: 1px solid rgba(235, 230, 243, 0.1);
   backdrop-filter: blur(14px);
-  box-shadow: 0 12px 40px rgba(60, 30, 100, 0.12);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
   transform: translateY(-50%) translateX(22px);
   opacity: 0;
   pointer-events: none;
@@ -253,7 +277,7 @@ body.dna-body {
   height: 3.25rem;
   padding: 0;
   background: #000;
-  border: 1px solid rgba(80, 60, 110, 0.18);
+  border: 1px solid rgba(235, 230, 243, 0.12);
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -304,7 +328,7 @@ body.dna-body {
   gap: 0.65rem;
   margin: 0 0 1.15rem;
   padding: 0.85rem 0 0;
-  border-top: 1px solid rgba(80, 60, 110, 0.12);
+  border-top: 1px solid rgba(235, 230, 243, 0.1);
 }
 
 .panel-facts div {
@@ -348,29 +372,6 @@ body.memory-open .hud-sync {
   opacity: 1;
 }
 
-.marker-line {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 2px;
-  height: 72px;
-  background: var(--accent);
-  transform: translate(-50%, -8px);
-  box-shadow: 0 0 10px rgba(155, 74, 239, 0.55);
-}
-
-.marker-diamond {
-  position: absolute;
-  left: 0;
-  bottom: 72px;
-  width: 10px;
-  height: 10px;
-  background: transparent;
-  border: 2px solid var(--accent);
-  transform: translate(-50%, -8px) rotate(45deg);
-  box-shadow: 0 0 8px rgba(155, 74, 239, 0.5);
-}
-
 @keyframes hud-pop {
   from {
     opacity: 0.35;
@@ -407,9 +408,9 @@ body.memory-open .hud-sync {
   justify-content: space-between;
   gap: 1rem;
   padding: 0 clamp(1rem, 3vw, 2rem);
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(18, 15, 24, 0.72);
   backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(255, 255, 255, 0.7);
+  border-top: 1px solid rgba(235, 230, 243, 0.08);
   font-size: 0.75rem;
   font-weight: 400;
   letter-spacing: 0;
@@ -472,8 +473,8 @@ body.memory-open .hud-sync {
 .duo::after {
   right: 0;
   top: 3px;
-  background: #fff;
-  border: 1px solid rgba(80, 60, 110, 0.25);
+  background: var(--bg-mid);
+  border: 1px solid rgba(235, 230, 243, 0.2);
 }
 
 .leave {
@@ -504,14 +505,21 @@ body.memory-open .hud-sync {
 }
 
 @media (max-width: 640px) {
-  .hud-tl {
+  .hud-sync {
     top: 1rem;
+    right: 1rem;
+    left: auto;
   }
 
-  .hud-sync {
-    top: clamp(6.5rem, 18vh, 9rem);
-    bottom: auto;
+  .hint {
+    bottom: calc(64px + 0.75rem);
     left: 1rem;
+  }
+
+  .world-sec {
+    max-width: min(92vw, 28rem);
+    mask-image: linear-gradient(90deg, #000 0%, #000 78%, transparent 100%);
+    -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 78%, transparent 100%);
   }
 
   .memory-panel {
@@ -537,14 +545,18 @@ body.memory-open .hud-sync {
   #strand {
     inset: 0 0 64px 0;
   }
+
+  #world {
+    inset: 0 0 64px 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .marker {
-    transition: none;
-  }
-
   .memory-panel {
     transition: opacity 0.2s ease;
+  }
+
+  .world-track {
+    transition: none;
   }
 }
