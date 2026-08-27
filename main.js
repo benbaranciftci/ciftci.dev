@@ -94,6 +94,8 @@ const GENES = [
         blurb: "GitHub · benbaranciftci",
         href: "https://github.com/benbaranciftci",
         cta: "Open GitHub",
+        logo: "assets/github-logo.svg",
+        logoAlt: "GitHub",
       },
       {
         id: "linkedin",
@@ -101,6 +103,9 @@ const GENES = [
         blurb: "LinkedIn · Baran Çiftçi",
         href: "https://www.linkedin.com/in/baran-%C3%A7ift%C3%A7i-a004b9283",
         cta: "Open LinkedIn",
+        logo: "assets/linkedin-logo.svg",
+        logoAlt: "LinkedIn",
+        logoBg: "light",
       },
       {
         id: "email",
@@ -219,6 +224,49 @@ const panelCta = document.getElementById("panel-cta");
 const panelKicker = document.getElementById("panel-kicker");
 const panelLogo = document.getElementById("panel-logo");
 const panelLogoImg = document.getElementById("panel-logo-img");
+const PANEL_REST = { rx: 5, ry: -8, tz: 6 };
+let panelRx = PANEL_REST.rx;
+let panelRy = PANEL_REST.ry;
+let panelTz = PANEL_REST.tz;
+let panelRxT = PANEL_REST.rx;
+let panelRyT = PANEL_REST.ry;
+let panelTzT = PANEL_REST.tz;
+const panelTiltOk = !reduceMotion && matchMedia("(pointer: fine)").matches;
+
+function setPanelTilt(rx, ry, tz) {
+  if (!panel) return;
+  panel.style.setProperty("--rx", `${rx.toFixed(2)}deg`);
+  panel.style.setProperty("--ry", `${ry.toFixed(2)}deg`);
+  panel.style.setProperty("--tz", `${tz.toFixed(2)}px`);
+}
+
+function onPanelPointerMove(e) {
+  if (!panelTiltOk || introActive) return;
+  const r = panel.getBoundingClientRect();
+  if (r.width < 8 || r.height < 8) return;
+  const x = ((e.clientX - r.left) / r.width) * 2 - 1;
+  const y = ((e.clientY - r.top) / r.height) * 2 - 1;
+  panelRyT = PANEL_REST.ry + x * 9;
+  panelRxT = PANEL_REST.rx - y * 7;
+  panelTzT = PANEL_REST.tz + 10;
+}
+
+function onPanelPointerLeave() {
+  panelRxT = PANEL_REST.rx;
+  panelRyT = PANEL_REST.ry;
+  panelTzT = PANEL_REST.tz;
+}
+
+function stepPanelTilt() {
+  if (!panelTiltOk) return;
+  panelRx += (panelRxT - panelRx) * 0.14;
+  panelRy += (panelRyT - panelRy) * 0.14;
+  panelTz += (panelTzT - panelTz) * 0.14;
+  if (Math.abs(panelRx - PANEL_REST.rx) < 0.02) panelRx = PANEL_REST.rx;
+  if (Math.abs(panelRy - PANEL_REST.ry) < 0.02) panelRy = PANEL_REST.ry;
+  if (Math.abs(panelTz - PANEL_REST.tz) < 0.02) panelTz = PANEL_REST.tz;
+  setPanelTilt(panelRx, panelRy, panelTz);
+}
 const mount = document.getElementById("strand");
 const worldEl = document.getElementById("world");
 const worldTrack = document.getElementById("world-track");
@@ -252,7 +300,6 @@ let introTimer = 0;
 let introReadyQueued = false;
 let selected = 0;
 let cursor = 0;
-let opened = false;
 let nucIndex = 0;
 let nucCursor = 0;
 let browsing = false;
@@ -395,7 +442,6 @@ function geneFromT(t) {
 }
 
 function focusHex() {
-  if (opened && geneNucs()) return geneCenterHex(selected);
   const gi = Math.floor(cursor);
   const gf = cursor - gi;
   const g2 = Math.min(GENES.length - 1, gi + 1);
@@ -496,7 +542,9 @@ function layoutHex(entry, hexIdx, focus, style) {
   const isContent = ud.kind === "content";
   const gene = isContent ? ud.gene : -1;
   const slotIdx = isContent ? ud.slot : -1;
-  const nucs = opened && gene === selected ? geneNucs() : null;
+  const atContact =
+    gene === selected && geneNucs() && Math.abs(cursor - selected) < 0.45;
+  const nucs = atContact ? geneNucs() : null;
   const isNuc = !!nucs && isContent;
   const nucDist = isNuc ? Math.abs(slotIdx - nucCursor) : 1;
   const isActiveNuc = isNuc && nucDist < 0.55;
@@ -505,7 +553,7 @@ function layoutHex(entry, hexIdx, focus, style) {
   const nearFocus = Math.abs(hexIdx - focus);
   const activeAmt = isNuc ? Math.max(0, 1 - nucDist) : 0;
 
-  if (flare > 0.01 && nearFocus < 2.2 && !(opened && geneNucs())) {
+  if (flare > 0.01 && nearFocus < 2.2 && !geneNucs()) {
     const g = 1 - nearFocus / 2.2;
     const side = hexIdx < focus ? -1 : 1;
     pos.addScaledVector(frame.binormal, side * g * g * flare * 1.75);
@@ -657,7 +705,8 @@ function applyWorldScroll() {
 
 function stepWorld(dt) {
   if (!worldEl || !worldTrack) return;
-  const nuc = opened && geneNucs() ? nucCursor : 0;
+  const nuc =
+    geneNucs() && Math.abs(cursor - selected) < 0.45 ? nucCursor : 0;
   const target = geneScrollY(cursor, nuc);
   if (reduceMotion) {
     worldY = target;
@@ -700,21 +749,23 @@ function setCta(href, label = "Enter") {
   panelCta.textContent = label;
 }
 
-function setLogo(logo, alt) {
+function setLogo(logo, alt, bg) {
   if (!logo) {
     panelLogo.hidden = true;
     panelLogoImg.removeAttribute("src");
     panelLogoImg.alt = "";
+    panelLogo.classList.remove("is-light");
     return;
   }
   panelLogo.hidden = false;
   panelLogoImg.src = logo;
   panelLogoImg.alt = alt || "";
+  panelLogo.classList.toggle("is-light", bg === "light" || bg === "white");
 }
 
 function updateHud(instant) {
   const g = currentGene();
-  const nucs = opened ? geneNucs(g) : null;
+  const nucs = geneNucs(g);
   const nuc = nucs ? nucs[nucIndex] : null;
   if (!instant) {
     hintEl.classList.remove("flash");
@@ -730,23 +781,21 @@ function updateHud(instant) {
     syncLabel.textContent = "GEN";
     syncVal.textContent = String(selected + 1).padStart(2, "0");
   }
-  if (opened && nucs) {
+  if (nucs) {
     const hasMore = nucIndex < nucs.length - 1;
     const hasPrev = nucIndex > 0;
-    if (hasMore && hasPrev) hintEl.textContent = "Scroll or ← → for next · Enter opens link";
-    else if (hasMore) hintEl.textContent = "Scroll or → for next · Enter opens link";
-    else if (hasPrev) hintEl.textContent = "Scroll or ← for previous · Enter opens link";
-    else hintEl.textContent = "Enter opens link · Esc closes";
-  } else if (opened) {
-    hintEl.textContent = "Esc closes gene";
+    if (hasMore && hasPrev) hintEl.textContent = "Scroll or ← → for contacts · Enter opens";
+    else if (hasMore) hintEl.textContent = "Scroll or → for next contact · Enter opens";
+    else if (hasPrev) hintEl.textContent = "Scroll or ← for previous · Enter opens";
+    else hintEl.textContent = "Enter opens link";
   } else if (g.locked) {
     hintEl.textContent = "Locked gene";
-  } else if (geneNucs(g)) {
-    hintEl.textContent = "Enter opens · then scroll between contacts";
+  } else if (g.href) {
+    hintEl.textContent = "Scroll the strand · Enter opens link";
   } else {
-    hintEl.textContent = "Enter opens this gene";
+    hintEl.textContent = "Browse genes along the strand";
   }
-  hintEl.classList.toggle("locked", !!g.locked && !opened);
+  hintEl.classList.toggle("locked", !!g.locked);
 
   const sec = worldSecs[selected];
   if (sec) {
@@ -760,68 +809,61 @@ function updateHud(instant) {
 function syncPanel() {
   const g = currentGene();
   const nucs = geneNucs(g);
-  if (opened && nucs) {
+  panel.classList.toggle("is-locked", !!g.locked);
+
+  if (nucs) {
     const nuc = nucs[nucIndex];
     panelKicker.textContent = "Contact";
     panelTitle.textContent = nuc.name;
     panelBody.textContent = nuc.blurb;
     panelFacts.hidden = true;
     panelFacts.innerHTML = "";
-    setLogo(null);
+    setLogo(nuc.logo, nuc.logoAlt || nuc.name, nuc.logoBg);
     setCta(nuc.href, ctaLabelFor(nuc));
     return;
   }
-  panelKicker.textContent = "Gene";
+
+  if (g.locked) {
+    panelKicker.textContent = "Locked";
+    panelTitle.textContent = g.name;
+    panelBody.textContent = g.blurb;
+    fillFacts(g);
+    setLogo(g.logo, g.logoAlt || g.name, g.logoBg);
+    setCta(null);
+    return;
+  }
+
+  panelKicker.textContent = g.region || "Gene";
   panelTitle.textContent = g.name;
   panelBody.textContent = g.blurb;
   fillFacts(g);
-  setLogo(g.logo, g.logoAlt || g.name);
+  setLogo(g.logo, g.logoAlt || g.name, g.logoBg);
   if (!g.href) setCta(null);
   else setCta(g.href, g.name ? `Open ${g.name}` : "Enter");
 }
 
-function openPanel() {
+function pulseLocked() {
+  syncBox.classList.remove("deny");
+  void syncBox.offsetWidth;
+  syncBox.classList.add("deny");
+  hintEl.classList.remove("deny");
+  void hintEl.offsetWidth;
+  hintEl.classList.add("deny");
+}
+
+function activateCta() {
   const g = currentGene();
   if (g.locked) {
-    syncBox.classList.remove("deny");
-    void syncBox.offsetWidth;
-    syncBox.classList.add("deny");
+    pulseLocked();
     return;
   }
-  opened = true;
-  nucIndex = 0;
-  nucCursor = 0;
-  flareTarget = 1;
-  spreadTarget = 1;
-  panel.hidden = false;
-  panel.classList.remove("is-open");
-  void panel.offsetWidth;
-  requestAnimationFrame(() => panel.classList.add("is-open"));
-  document.body.classList.add("memory-open");
-  syncPanel();
-  updateHud(true);
+  const nucs = geneNucs(g);
+  const href = nucs ? nucs[nucIndex]?.href : g.href;
+  if (!href) return;
+  window.open(href, href.startsWith("http") ? "_blank" : "_self");
 }
 
-function closePanel() {
-  opened = false;
-  nucIndex = 0;
-  nucCursor = 0;
-  flareTarget = 0;
-  spreadTarget = browsing ? 1 : 0.3;
-  panel.classList.remove("is-open");
-  document.body.classList.remove("memory-open");
-  setTimeout(() => {
-    if (!opened) panel.hidden = true;
-  }, 320);
-  updateHud(true);
-}
-
-function togglePanel() {
-  if (opened) closePanel();
-  else openPanel();
-}
-
-function setNuc(i) {
+function setNuc(i, instant = false) {
   const nucs = geneNucs();
   if (!nucs?.length) return;
   const next = Math.max(0, Math.min(nucs.length - 1, i));
@@ -833,7 +875,7 @@ function setNuc(i) {
     nucCursor = next;
   }
   syncPanel();
-  updateHud(false);
+  updateHud(instant);
 }
 
 function pulseTravel() {
@@ -841,22 +883,37 @@ function pulseTravel() {
   flareTarget = 0.55;
   spreadTarget = 1;
   setTimeout(() => {
-    if (!opened) flareTarget = 0;
+    flareTarget = 0;
   }, 220);
 }
 
 function setTarget(i) {
   const next = Math.max(0, Math.min(GENES.length - 1, i));
   if (next === selected) return;
-  if (opened) closePanel();
   selected = next;
+  nucIndex = 0;
+  nucCursor = 0;
   pulseTravel();
+  syncPanel();
   if (reduceMotion) {
     cursor = next;
     updateHud(true);
   } else {
     updateHud(false);
   }
+}
+
+function stepContactOrGene(dir) {
+  const nucs = geneNucs();
+  if (nucs?.length) {
+    const next = nucIndex + dir;
+    if (next >= 0 && next < nucs.length) {
+      setNuc(next);
+      return;
+    }
+  }
+  setTarget(selected + dir);
+  spreadTarget = 1;
 }
 
 function pickFromPointer(clientX, clientY) {
@@ -881,7 +938,7 @@ function pickFromPointer(clientX, clientY) {
     }
   }
 
-  const nucs = opened ? geneNucs() : null;
+  const nucs = bestGene === selected ? geneNucs() : null;
   if (nucs && hit && bestGene === selected) {
     return { gene: selected, nuc: bestSlot, dist: bestD, mode: "nuc" };
   }
@@ -893,39 +950,38 @@ function onPointerMove(e) {
   if (introActive || unfold < 0.4) return;
   const pick = pickFromPointer(e.clientX, e.clientY);
   browsing = pick.dist < 120 && pick.mode !== "miss";
-  spreadTarget = browsing || opened ? 1 : 0.3;
+  spreadTarget = browsing || geneNucs() ? 1 : 0.3;
   renderer.domElement.style.cursor = browsing ? "pointer" : "default";
+
+  if (pick.mode === "nuc" && pick.gene === selected && pick.dist < 110) {
+    setNuc(pick.nuc, true);
+  }
 }
 
 function onPointerLeave() {
   browsing = false;
-  spreadTarget = opened ? 0.85 : 0.25;
+  spreadTarget = geneNucs() ? 0.85 : 0.25;
   renderer.domElement.style.cursor = "default";
 }
 
 function onClick(e) {
   if (introActive || unfold < 0.6) return;
   const pick = pickFromPointer(e.clientX, e.clientY);
-  if (pick.dist > 140 || pick.mode === "miss") {
-    if (opened) closePanel();
-    return;
-  }
+  if (pick.dist > 140 || pick.mode === "miss") return;
 
-  if (opened && pick.mode === "nuc") {
+  if (pick.mode === "nuc" && pick.gene === selected) {
     setNuc(pick.nuc);
-    const nuc = geneNucs()?.[nucIndex];
-    if (nuc?.href) window.open(nuc.href, nuc.href.startsWith("http") ? "_blank" : "_self");
+    activateCta();
     return;
   }
 
-  const same = pick.gene === selected;
+  if (pick.gene === selected) {
+    activateCta();
+    return;
+  }
+
   setTarget(pick.gene);
   if (reduceMotion) cursor = pick.gene;
-  if (same) {
-    togglePanel();
-  } else if (!GENES[pick.gene].locked) {
-    openPanel();
-  }
 }
 
 let wheelLock = 0;
@@ -961,13 +1017,7 @@ function onWheel(e) {
   const dir = wheelAccum > 0 ? 1 : -1;
   wheelAccum = 0;
   wheelLock = now + WHEEL_COOLDOWN_MS;
-
-  if (opened && geneNucs()) {
-    setNuc(nucIndex + dir);
-    return;
-  }
-  setTarget(selected + dir);
-  spreadTarget = 1;
+  stepContactOrGene(dir);
 }
 
 function onKey(e) {
@@ -986,29 +1036,16 @@ function onKey(e) {
   }
   if (e.key === "ArrowRight" || e.key === "ArrowDown") {
     e.preventDefault();
-    if (opened && geneNucs()) setNuc(nucIndex + 1);
-    else {
-      setTarget(selected + 1);
-      spreadTarget = 1;
-    }
+    stepContactOrGene(1);
   } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
     e.preventDefault();
-    if (opened && geneNucs()) setNuc(nucIndex - 1);
-    else {
-      setTarget(selected - 1);
-      spreadTarget = 1;
-    }
+    stepContactOrGene(-1);
   } else if (e.key === "Enter" || e.key === " ") {
     e.preventDefault();
-    if (opened && geneNucs()) {
-      const nuc = geneNucs()[nucIndex];
-      if (nuc?.href) window.open(nuc.href, nuc.href.startsWith("http") ? "_blank" : "_self");
-    } else {
-      togglePanel();
-    }
+    activateCta();
   } else if (e.key === "Escape") {
     e.preventDefault();
-    if (opened) closePanel();
+    if (geneNucs() && nucIndex > 0) setNuc(0);
   }
 }
 
@@ -1035,7 +1072,7 @@ function tick(now) {
   if (!reduceMotion) {
     cursor += (selected - cursor) * (browsing ? 0.16 : 0.1);
     if (Math.abs(selected - cursor) < 0.001) cursor = selected;
-    if (opened && geneNucs()) {
+    if (geneNucs()) {
       nucCursor += (nucIndex - nucCursor) * 0.14;
       if (Math.abs(nucIndex - nucCursor) < 0.001) nucCursor = nucIndex;
     } else {
@@ -1062,6 +1099,7 @@ function tick(now) {
 
   layout();
   stepWorld(dt);
+  stepPanelTilt();
   renderer.render(scene, camera);
   if (introActive && introPhase === "load" && loadMarks.scene && !loadMarks.frame) {
     markLoaded("frame");
@@ -1069,31 +1107,14 @@ function tick(now) {
   requestAnimationFrame(tick);
 }
 
-document.getElementById("panel-close").addEventListener("click", closePanel);
 document.getElementById("btn-prev").addEventListener("click", () => {
-  if (opened && geneNucs()) setNuc(nucIndex - 1);
-  else {
-    setTarget(selected - 1);
-    spreadTarget = 1;
-  }
+  stepContactOrGene(-1);
 });
 document.getElementById("btn-next").addEventListener("click", () => {
-  if (opened && geneNucs()) setNuc(nucIndex + 1);
-  else {
-    setTarget(selected + 1);
-    spreadTarget = 1;
-  }
+  stepContactOrGene(1);
 });
 document.getElementById("btn-select").addEventListener("click", () => {
-  if (opened && geneNucs()) {
-    const nuc = geneNucs()[nucIndex];
-    if (nuc?.href) window.open(nuc.href, nuc.href.startsWith("http") ? "_blank" : "_self");
-  } else {
-    togglePanel();
-  }
-});
-document.getElementById("btn-back").addEventListener("click", () => {
-  if (opened) closePanel();
+  activateCta();
 });
 
 const themeBtn = document.getElementById("btn-theme");
@@ -1149,6 +1170,11 @@ renderer.domElement.addEventListener("wheel", onWheel, { passive: false });
 document.addEventListener("keydown", onKey);
 addEventListener("resize", resize);
 
+if (panel && panelTiltOk) {
+  panel.addEventListener("pointermove", onPanelPointerMove);
+  panel.addEventListener("pointerleave", onPanelPointerLeave);
+}
+
 addDecor();
 buildWorldPage();
 resize();
@@ -1158,6 +1184,8 @@ updateHud(true);
 measureWorldTravel();
 worldY = geneScrollY(selected);
 applyWorldScroll();
+syncPanel();
+document.body.classList.add("memory-open");
 
 function setIntroPct(p) {
   const v = Math.max(0, Math.min(100, Math.round(p)));
@@ -1184,7 +1212,14 @@ function markLoaded(key) {
 }
 
 function preloadGeneAssets() {
-  const urls = [...new Set(GENES.map((g) => g.logo).filter(Boolean))];
+  const urls = [
+    ...new Set(
+      GENES.flatMap((g) => [
+        g.logo,
+        ...(g.nucleotides?.map((n) => n.logo) || []),
+      ]).filter(Boolean)
+    ),
+  ];
   if (!urls.length) {
     markLoaded("assets");
     return Promise.resolve();
