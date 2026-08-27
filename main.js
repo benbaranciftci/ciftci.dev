@@ -223,18 +223,45 @@ const mount = document.getElementById("strand");
 const worldEl = document.getElementById("world");
 const worldTrack = document.getElementById("world-track");
 
+const introEl = document.getElementById("intro");
+const introLoad = document.getElementById("intro-load");
+const introRing = document.getElementById("intro-ring");
+const introPct = document.getElementById("intro-pct");
+const introSplit = document.getElementById("intro-split");
+const introActiveStart = Boolean(introEl) && !reduceMotion;
+
+const LOAD_WEIGHTS = {
+  boot: 12,
+  fonts: 20,
+  scene: 38,
+  assets: 20,
+  frame: 10,
+};
+
+const loadMarks = {
+  boot: false,
+  fonts: false,
+  scene: false,
+  assets: false,
+  frame: false,
+};
+
+let introActive = introActiveStart;
+let introPhase = introActive ? "load" : "done";
+let introTimer = 0;
+let introReadyQueued = false;
 let selected = 0;
 let cursor = 0;
 let opened = false;
 let nucIndex = 0;
 let nucCursor = 0;
 let browsing = false;
-let unfold = reduceMotion ? 1 : 0;
-let unfoldTarget = 1;
+let unfold = reduceMotion || !introActive ? 1 : 0.05;
+let unfoldTarget = introActive ? 0.15 : 1;
 let flare = 0;
 let flareTarget = 0;
-let spread = reduceMotion ? 0.35 : 0;
-let spreadTarget = 0.3;
+let spread = reduceMotion ? 0.35 : introActive ? 0.4 : 0;
+let spreadTarget = introActive ? 0.55 : 0.3;
 let curve = null;
 let frames = null;
 let openBuilt = -1;
@@ -863,7 +890,7 @@ function pickFromPointer(clientX, clientY) {
 }
 
 function onPointerMove(e) {
-  if (unfold < 0.4) return;
+  if (introActive || unfold < 0.4) return;
   const pick = pickFromPointer(e.clientX, e.clientY);
   browsing = pick.dist < 120 && pick.mode !== "miss";
   spreadTarget = browsing || opened ? 1 : 0.3;
@@ -877,7 +904,7 @@ function onPointerLeave() {
 }
 
 function onClick(e) {
-  if (unfold < 0.6) return;
+  if (introActive || unfold < 0.6) return;
   const pick = pickFromPointer(e.clientX, e.clientY);
   if (pick.dist > 140 || pick.mode === "miss") {
     if (opened) closePanel();
@@ -908,6 +935,10 @@ const WHEEL_STEP_PX = 90;
 
 function onWheel(e) {
   e.preventDefault();
+  if (introActive) {
+    skipIntro();
+    return;
+  }
   if (unfold < 0.4) return;
   const useY = Math.abs(e.deltaY) >= Math.abs(e.deltaX);
   let delta = useY ? e.deltaY : e.deltaX;
@@ -921,7 +952,6 @@ function onWheel(e) {
     return;
   }
 
-  // Reset leftover when direction flips so up/down need the same effort.
   if (wheelAccum !== 0 && Math.sign(delta) !== Math.sign(wheelAccum)) {
     wheelAccum = 0;
   }
@@ -941,6 +971,19 @@ function onWheel(e) {
 }
 
 function onKey(e) {
+  if (introActive) {
+    if (
+      e.key === "Escape" ||
+      e.key === "Enter" ||
+      e.key === " " ||
+      e.key === "ArrowDown" ||
+      e.key === "ArrowRight"
+    ) {
+      e.preventDefault();
+      skipIntro();
+    }
+    return;
+  }
   if (e.key === "ArrowRight" || e.key === "ArrowDown") {
     e.preventDefault();
     if (opened && geneNucs()) setNuc(nucIndex + 1);
@@ -966,12 +1009,6 @@ function onKey(e) {
   } else if (e.key === "Escape") {
     e.preventDefault();
     if (opened) closePanel();
-    else {
-      unfoldTarget = 0;
-      setTimeout(() => {
-        location.href = "/";
-      }, reduceMotion ? 0 : 420);
-    }
   }
 }
 
@@ -1026,6 +1063,9 @@ function tick(now) {
   layout();
   stepWorld(dt);
   renderer.render(scene, camera);
+  if (introActive && introPhase === "load" && loadMarks.scene && !loadMarks.frame) {
+    markLoaded("frame");
+  }
   requestAnimationFrame(tick);
 }
 
@@ -1054,12 +1094,6 @@ document.getElementById("btn-select").addEventListener("click", () => {
 });
 document.getElementById("btn-back").addEventListener("click", () => {
   if (opened) closePanel();
-  else {
-    unfoldTarget = 0;
-    setTimeout(() => {
-      location.href = "/";
-    }, reduceMotion ? 0 : 420);
-  }
 });
 
 const themeBtn = document.getElementById("btn-theme");
@@ -1080,7 +1114,6 @@ function applyTheme(next) {
   try {
     localStorage.setItem("dna-theme", themeName);
   } catch {
-    /* ignore */
   }
 
   scene.fog.color.setHex(theme.fog);
@@ -1125,7 +1158,142 @@ updateHud(true);
 measureWorldTravel();
 worldY = geneScrollY(selected);
 applyWorldScroll();
-requestAnimationFrame(() => {
+
+function setIntroPct(p) {
+  const v = Math.max(0, Math.min(100, Math.round(p)));
+  if (introRing) introRing.style.setProperty("--p", String(v));
+  if (introPct) introPct.textContent = `${v}%`;
+}
+
+function loadProgress() {
+  let p = 0;
+  for (const key of Object.keys(LOAD_WEIGHTS)) {
+    if (loadMarks[key]) p += LOAD_WEIGHTS[key];
+  }
+  return p;
+}
+
+function markLoaded(key) {
+  if (loadMarks[key] || introPhase === "done") return;
+  loadMarks[key] = true;
+  if (!introActive || introPhase !== "load") return;
+  setIntroPct(loadProgress());
+  if (loadProgress() < 100 || introReadyQueued) return;
+  introReadyQueued = true;
+  introTimer = setTimeout(openIntroSplit, 200);
+}
+
+function preloadGeneAssets() {
+  const urls = [...new Set(GENES.map((g) => g.logo).filter(Boolean))];
+  if (!urls.length) {
+    markLoaded("assets");
+    return Promise.resolve();
+  }
+  return Promise.all(
+    urls.map(
+      (src) =>
+        new Promise((resolve) => {
+          const img = new Image();
+          img.onload = resolve;
+          img.onerror = resolve;
+          img.src = src;
+        })
+    )
+  ).then(() => markLoaded("assets"));
+}
+
+function finishIntro() {
+  if (introPhase === "done") return;
+  introPhase = "done";
+  introActive = false;
+  clearTimeout(introTimer);
   unfoldTarget = 1;
+  spreadTarget = 0.3;
+  flareTarget = 0;
+  document.body.classList.remove("is-intro");
+  if (!introEl) return;
+  introEl.classList.add("is-open");
+  introEl.style.pointerEvents = "none";
+  setTimeout(() => {
+    introEl.hidden = true;
+    introEl.classList.remove("is-open");
+    if (introLoad) introLoad.classList.remove("is-gone");
+    if (introSplit) introSplit.hidden = true;
+    setIntroPct(0);
+  }, reduceMotion ? 0 : 1000);
+}
+
+function openIntroSplit() {
+  if (introPhase !== "load") return;
+  introPhase = "split";
+  clearTimeout(introTimer);
+  setIntroPct(100);
+  if (introLoad) introLoad.classList.add("is-gone");
+  if (introSplit) introSplit.hidden = false;
+  unfoldTarget = 1;
+  spreadTarget = 0.85;
+  flareTarget = 0.25;
+  introTimer = setTimeout(() => {
+    flareTarget = 0;
+    finishIntro();
+  }, reduceMotion ? 0 : 720);
+}
+
+function skipIntro() {
+  if (!introActive) return;
+  if (introPhase === "load") {
+    for (const key of Object.keys(LOAD_WEIGHTS)) loadMarks[key] = true;
+    setIntroPct(100);
+    openIntroSplit();
+    return;
+  }
+  finishIntro();
+}
+
+function startIntro() {
+  if (!introActive || !introEl) {
+    introActive = false;
+    introPhase = "done";
+    document.body.classList.remove("is-intro");
+    if (introEl) introEl.hidden = true;
+    unfoldTarget = 1;
+    spreadTarget = 0.3;
+    return;
+  }
+  document.body.classList.add("is-intro");
+  introEl.hidden = false;
+  if (introLoad) introLoad.hidden = false;
+  if (introSplit) introSplit.hidden = true;
+  setIntroPct(0);
+  unfoldTarget = 0.2;
+  spreadTarget = 0.55;
+  const onSkip = () => skipIntro();
+  introEl.addEventListener("click", onSkip);
+  introEl.addEventListener(
+    "wheel",
+    (e) => {
+      e.preventDefault();
+      onSkip();
+    },
+    { passive: false }
+  );
+  introEl.addEventListener("touchstart", onSkip, { passive: true });
+  markLoaded("boot");
+  const fontsReady = document.fonts?.ready ?? Promise.resolve();
+  fontsReady.then(() => markLoaded("fonts")).catch(() => markLoaded("fonts"));
+  preloadGeneAssets();
+}
+
+const skipLink = document.querySelector(".skip-link");
+if (skipLink) {
+  skipLink.addEventListener("click", () => {
+    if (introActive) skipIntro();
+  });
+}
+
+startIntro();
+markLoaded("scene");
+requestAnimationFrame(() => {
+  if (!introActive) unfoldTarget = 1;
 });
 requestAnimationFrame(tick);

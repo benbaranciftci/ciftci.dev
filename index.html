@@ -5,203 +5,98 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Baran Çiftçi. Developer and computer engineering student. ciftci.dev"
+      content="Baran Çiftçi. Developer and computer engineering student. Torino and Istanbul."
     />
     <title>baran çiftçi</title>
     <link rel="icon" href="/favicon.svg?v=4" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <a class="skip-link" href="#main">Skip to content</a>
-
-    <header class="site-header">
-      <a class="brand" href="/">ciftci.dev</a>
-      <nav class="nav" aria-label="Primary">
-        <a href="#work">Work</a>
-        <a href="#about">About</a>
-        <a href="#contact">Contact</a>
-        <a href="/menu.html">Menu</a>
-      </nav>
-    </header>
-
-    <main id="main">
-      <section class="hero">
-        <h1 class="name">Baran Çiftçi</h1>
-        <p class="lede">
-          Torino and Istanbul. I build software, robots, and games while
-          studying computer engineering.
-        </p>
-        <div class="hero-links">
-          <a href="#work">Selected work</a>
-          <a href="https://github.com/benbaranciftci" target="_blank" rel="noopener noreferrer"
-            >GitHub</a
-          >
-        </div>
-      </section>
-
-      <section id="work" class="section">
-        <h2 class="section-title">Selected work</h2>
-        <ul class="work-list">
-          <li class="work-row reveal is-soon">
-            <div class="work-link">
-              <span class="work-title">aIfred</span>
-              <span class="work-meta">
-                <span class="work-tag">Coming soon</span>
-                <span class="work-year">2024</span>
-              </span>
-            </div>
-          </li>
-          <li class="work-row reveal">
-            <a
-              class="work-link"
-              href="https://unimind.consulting/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <span class="work-title">unimind</span>
-              <span class="work-meta">
-                <span class="work-tag">University rankings</span>
-                <span class="work-year">2025</span>
-              </span>
-            </a>
-          </li>
-          <li class="work-row reveal">
-            <a class="work-link" href="https://ciftci.dev/">
-              <span class="work-title">ciftci.dev</span>
-              <span class="work-meta">
-                <span class="work-tag">Personal site</span>
-                <span class="work-year">2026</span>
-              </span>
-            </a>
-          </li>
-          <li class="work-row reveal is-soon">
-            <div class="work-link">
-              <span class="work-title">Robotics</span>
-              <span class="work-meta">
-                <span class="work-tag">Coming soon</span>
-                <span class="work-year">—</span>
-              </span>
-            </div>
-          </li>
-          <li class="work-row reveal is-soon">
-            <div class="work-link">
-              <span class="work-title">Games</span>
-              <span class="work-meta">
-                <span class="work-tag">Coming soon</span>
-                <span class="work-year">—</span>
-              </span>
-            </div>
-          </li>
-        </ul>
-      </section>
-
-      <section id="about" class="section">
-        <h2 class="section-title">About</h2>
-        <div class="about-grid">
-          <p class="about-prose reveal">
-            Computer engineering student split between Torino and Istanbul.
-            I write software, tinker with robots, and ship small games —
-            learning by building, then building again.
-          </p>
-          <dl class="about-facts reveal">
-            <div>
-              <dt>Based in</dt>
-              <dd>Torino · Istanbul</dd>
-            </div>
-            <div>
-              <dt>Focus</dt>
-              <dd>Software · Robotics · Games</dd>
-            </div>
-            <div>
-              <dt>Studying</dt>
-              <dd>Computer Engineering</dd>
-            </div>
-          </dl>
-        </div>
-      </section>
-
-      <section id="contact" class="section contact">
-        <h2 class="section-title">Find me</h2>
-        <ul class="link-list">
-          <li class="reveal">
-            <a href="https://github.com/benbaranciftci" target="_blank" rel="noopener noreferrer"
-              >GitHub</a
-            >
-            <span>benbaranciftci</span>
-          </li>
-          <li class="reveal">
-            <a
-              href="https://www.linkedin.com/in/baran-%C3%A7ift%C3%A7i-a004b9283"
-              target="_blank"
-              rel="noopener noreferrer"
-              >LinkedIn</a
-            >
-            <span>Baran Çiftçi</span>
-          </li>
-          <li class="reveal">
-            <a href="mailto:baran@ciftci.dev">Email</a>
-            <span>baran@ciftci.dev</span>
-          </li>
-        </ul>
-      </section>
-    </main>
-
-    <footer class="site-footer">
-      <span>© <span id="year"></span> Baran Çiftçi</span>
-      <span>Torino and Istanbul</span>
-    </footer>
-
     <script>
-      document.getElementById("year").textContent = new Date().getFullYear();
-
-      const navLinks = document.querySelectorAll(".nav a[href^='#']");
-      const sections = [...navLinks]
-        .map((link) => document.querySelector(link.getAttribute("href")))
-        .filter(Boolean);
-
-      function setCurrentNav() {
-        const offset = window.scrollY + 120;
-        let current = sections[0];
-
-        for (const section of sections) {
-          if (section.offsetTop <= offset) current = section;
+      (() => {
+        try {
+          const saved = localStorage.getItem("dna-theme");
+          const theme =
+            saved === "dark" || saved === "light"
+              ? saved
+              : matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light";
+          document.documentElement.setAttribute("data-theme", theme);
+        } catch {
+          document.documentElement.setAttribute("data-theme", "light");
         }
-
-        navLinks.forEach((link) => {
-          const match = link.getAttribute("href") === `#${current.id}`;
-          if (match) link.setAttribute("aria-current", "location");
-          else link.removeAttribute("aria-current");
-        });
-      }
-
-      setCurrentNav();
-      window.addEventListener("hashchange", setCurrentNav);
-
-      if ("IntersectionObserver" in window) {
-        const navObserver = new IntersectionObserver(() => setCurrentNav(), {
-          rootMargin: "-20% 0px -60% 0px",
-          threshold: 0,
-        });
-        sections.forEach((section) => navObserver.observe(section));
-
-        const revealNodes = document.querySelectorAll(".reveal");
-        const revealObserver = new IntersectionObserver(
-          (entries) => {
-            entries.forEach((entry) => {
-              if (entry.isIntersecting) {
-                entry.target.classList.add("is-visible");
-                revealObserver.unobserve(entry.target);
-              }
-            });
-          },
-          { rootMargin: "0px 0px -8% 0px", threshold: 0.12 }
-        );
-        revealNodes.forEach((node) => revealObserver.observe(node));
-      } else {
-        document.querySelectorAll(".reveal").forEach((node) => {
-          node.classList.add("is-visible");
-        });
+        if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          document.documentElement.classList.add("reduce-motion");
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
+        }
       }
     </script>
+  </head>
+  <body class="dna-body is-intro">
+    <a class="skip-link" href="#hud">Skip to DNA</a>
+
+    <div id="intro" class="intro">
+      <div class="intro-load" id="intro-load">
+        <div class="intro-ring" id="intro-ring" style="--p: 0">
+          <span class="intro-pct" id="intro-pct">0%</span>
+          <span class="duo intro-duo" aria-hidden="true"></span>
+        </div>
+      </div>
+      <div class="intro-split" id="intro-split" hidden>
+        <div class="intro-half intro-half-top" aria-hidden="true">
+          <p class="intro-giant">baran çiftçi</p>
+        </div>
+        <div class="intro-half intro-half-bot">
+          <h1 class="intro-giant">baran çiftçi</h1>
+        </div>
+      </div>
+    </div>
+
+    <div id="strand" aria-hidden="true"></div>
+
+    <div id="world" aria-hidden="true">
+      <div class="world-track" id="world-track"></div>
+    </div>
+
+    <div id="hud" class="hud">
+      <p class="hint" id="hint">Browse genes along the strand</p>
+      <div class="hud-sync" id="sync-box">
+        <span class="sync-top" id="sync-label">GEN</span>
+        <span class="sync-bot" id="sync-val">01</span>
+      </div>
+    </div>
+
+    <aside id="memory-panel" class="memory-panel" hidden>
+      <button type="button" class="panel-close" id="panel-close">Close</button>
+      <div class="panel-logo" id="panel-logo" hidden>
+        <img id="panel-logo-img" src="" alt="" />
+      </div>
+      <p class="panel-kicker" id="panel-kicker">Gene</p>
+      <h2 class="panel-title" id="panel-title">—</h2>
+      <p class="panel-body" id="panel-body"></p>
+      <dl class="panel-facts" id="panel-facts" hidden></dl>
+      <a class="panel-cta" id="panel-cta" href="#" hidden>Enter</a>
+    </aside>
+
+    <footer class="bar">
+      <div class="bar-left">
+        <span class="duo" aria-hidden="true"></span>
+        <span>DNA</span>
+        <button type="button" class="bar-btn" id="btn-theme" aria-pressed="false">Dark</button>
+      </div>
+      <div class="bar-right">
+        <button type="button" class="bar-btn" id="btn-prev"><kbd>←</kbd> Prev</button>
+        <button type="button" class="bar-btn" id="btn-next"><kbd>→</kbd> Next</button>
+        <button type="button" class="bar-btn" id="btn-select"><kbd>↵</kbd> Select</button>
+        <button type="button" class="bar-btn" id="btn-back"><kbd>Esc</kbd> Back</button>
+      </div>
+    </footer>
+
+    <script type="module" src="main.js"></script>
   </body>
 </html>
