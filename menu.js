@@ -1,13 +1,14 @@
 import * as THREE from "three";
 
-/** Strand items are genes. Hex plates are nucleotides; some genes expose selectable ones. */
+/** Strand items are genes. Each gene owns persistent hex objects on the curve. */
 const GENES = [
   {
     id: "about",
     region: "ABOUT",
     year: "NOW",
-    name: "Origin",
+    name: "origin",
     sync: "BIO",
+    hexes: 5,
     blurb:
       "Computer engineering student split between Torino and Istanbul. I write software, tinker with robots, and ship small games — learning by building, then building again.",
     facts: [
@@ -22,6 +23,7 @@ const GENES = [
     year: "2024",
     name: "aIfred",
     sync: "SOON",
+    hexes: 4,
     logo: "assets/alfred-logo.jpg",
     logoAlt: "aIfred",
     blurb: "Local operator — talks on the machine. No cloud. Coming soon.",
@@ -37,6 +39,7 @@ const GENES = [
     year: "2025",
     name: "unimind",
     sync: "LIVE",
+    hexes: 5,
     href: "https://unimind.consulting/",
     logo: "assets/unimind-logo.png",
     logoAlt: "unimind",
@@ -54,6 +57,7 @@ const GENES = [
     year: "2026",
     name: "ciftci.dev",
     sync: "LIVE",
+    hexes: 3,
     href: "https://ciftci.dev/",
     blurb: "Personal site. Selected work.",
   },
@@ -61,25 +65,27 @@ const GENES = [
     id: "robotics",
     region: "WORK",
     year: "—",
-    name: "Robotics",
+    name: "robotics",
     sync: "LOCKED",
+    hexes: 3,
     locked: true,
-    blurb: "Selected work — Robotics. Coming soon.",
+    blurb: "Selected work — robotics. Coming soon.",
   },
   {
     id: "games",
     region: "WORK",
     year: "—",
-    name: "Games",
+    name: "games",
     sync: "LOCKED",
+    hexes: 3,
     locked: true,
-    blurb: "Selected work — Games. Coming soon.",
+    blurb: "Selected work — games. Coming soon.",
   },
   {
-    id: "signal",
+    id: "contact",
     region: "CONTACT",
     year: "NOW",
-    name: "Signal",
+    name: "contact",
     sync: "OPEN",
     blurb: "Ways to reach me — pick a nucleotide on the strand.",
     nucleotides: [
@@ -107,8 +113,23 @@ const GENES = [
 
 const ACCENT = 0x7113d7;
 const ACCENT_HOT = 0x9b4aef;
-const PLATE_COUNT = 280;
+const PAD_EACH = 16;
+const CURVE_SAMPLES = 180;
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/** Persistent content hex slots — one mesh per gene hex. */
+const CONTENT = [];
+const GENE_START = [];
+{
+  let at = 0;
+  GENES.forEach((g, gi) => {
+    GENE_START[gi] = at;
+    const n = g.nucleotides?.length ?? g.hexes ?? 3;
+    for (let slot = 0; slot < n; slot++) CONTENT.push({ gene: gi, slot, contentIdx: at++ });
+  });
+}
+const CONTENT_COUNT = CONTENT.length;
+const SLOT_COUNT = PAD_EACH * 2 + CONTENT_COUNT;
 
 const yearEl = document.getElementById("year");
 const nameEl = document.getElementById("mem-name");
@@ -134,6 +155,8 @@ let selected = 0;
 let cursor = 0;
 let opened = false;
 let nucIndex = 0;
+/** Eased nucleotide focus — same role as cursor for genes. */
+let nucCursor = 0;
 let browsing = false;
 let unfold = reduceMotion ? 1 : 0;
 let unfoldTarget = 1;
@@ -144,12 +167,16 @@ let spreadTarget = 0.3;
 let curve = null;
 let frames = null;
 let openBuilt = -1;
+let layoutFocus = 0;
 
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0xe8e2ef, 12, 40);
 
 const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
-camera.position.set(0.15, 0.25, 19);
+camera.position.set(0.2, 0.35, 18.5);
+
+/** Mild stage pose — mostly face-on, slight bank only. */
+const STRAND_POSE = { x: -0.08, y: 0.12, z: -0.05 };
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -186,9 +213,20 @@ function hexPlateGeo() {
 
 const plateGeo = hexPlateGeo();
 const edgeGeo = new THREE.EdgesGeometry(plateGeo);
-const plates = [];
-const edges = [];
-const geneMarkers = [];
+const contentHexes = [];
+const padHexes = [];
+
+const _m = new THREE.Matrix4();
+const _q = new THREE.Quaternion();
+const _x = new THREE.Vector3();
+const _y = new THREE.Vector3();
+const _z = new THREE.Vector3();
+const _tmp = new THREE.Vector3();
+
+function geneHexCount(gi) {
+  const g = GENES[gi];
+  return g.nucleotides?.length ?? g.hexes ?? 3;
+}
 
 function currentGene() {
   return GENES[selected];
@@ -200,31 +238,36 @@ function geneNucs(g = currentGene()) {
 
 function makeCurve(openAmt) {
   const pts = [];
-  const n = 22;
+  const n = 40;
   for (let i = 0; i < n; i++) {
     const t = i / (n - 1);
-    const x = THREE.MathUtils.lerp(-10, 10, t);
-    const y0 = THREE.MathUtils.lerp(-3.6, 3.4, t);
-    const w1 = Math.sin(t * Math.PI * 3.4) * 3.1 * openAmt;
-    const w2 = Math.sin(t * Math.PI * 1.7 + 0.8) * 1.35 * openAmt;
-    const w3 = Math.cos(t * Math.PI * 5.1 + 0.3) * 0.65 * openAmt;
+    // Mostly horizontal ribbon — soft Y rise, gentle Z undulation
+    const x = THREE.MathUtils.lerp(-9.5, 9.5, t);
+    const y0 = THREE.MathUtils.lerp(-0.85, 1.05, t);
+    const w1 = Math.sin(t * Math.PI * 2.2) * 1.65 * openAmt;
+    const w2 = Math.sin(t * Math.PI * 1.25 + 0.8) * 0.7 * openAmt;
+    const w3 = Math.cos(t * Math.PI * 2.4 + 0.25) * 0.2 * openAmt;
     const z =
-      Math.sin(t * Math.PI * 2.8 + 0.4) * 2.7 * openAmt +
-      Math.cos(t * Math.PI * 1.4) * 1.1 * openAmt;
+      Math.sin(t * Math.PI * 1.85 + 0.4) * 1.55 * openAmt +
+      Math.cos(t * Math.PI * 1.0) * 0.55 * openAmt;
     pts.push(new THREE.Vector3(x, y0 + w1 + w2 + w3, z));
   }
-  return new THREE.CatmullRomCurve3(pts, false, "catmullrom", 0.58);
+  return new THREE.CatmullRomCurve3(pts, false, "centripetal");
 }
 
 function rebuildCurve(openAmt) {
   if (Math.abs(openAmt - openBuilt) < 0.008 && curve) return;
   openBuilt = openAmt;
   curve = makeCurve(Math.max(0.06, openAmt));
-  frames = curve.computeFrenetFrames(PLATE_COUNT, false);
+  frames = curve.computeFrenetFrames(CURVE_SAMPLES, false);
 }
 
 function geneT(i) {
   return (i + 0.5) / GENES.length;
+}
+
+function geneCenterHex(gi) {
+  return GENE_START[gi] + (geneHexCount(gi) - 1) * 0.5;
 }
 
 function geneFromT(t) {
@@ -240,93 +283,35 @@ function geneFromT(t) {
   return best;
 }
 
-/** Plate indices that stand in as nucleotides for an opened gene. */
-function nucleotidePlateIds(gi, count) {
-  const t0 = gi / GENES.length;
-  const t1 = (gi + 1) / GENES.length;
-  const ids = [];
-  for (let n = 0; n < count; n++) {
-    const u = count === 1 ? 0.5 : (n + 0.5) / count;
-    const t = THREE.MathUtils.lerp(t0 + 0.08 * (t1 - t0), t1 - 0.08 * (t1 - t0), u);
-    ids.push(Math.round(t * (PLATE_COUNT - 1)));
-  }
-  return ids;
+/** Content-hex focus (float). Cursor eases here — drives travel. */
+function focusHex() {
+  // Contact nucs: keep the gene centered; active nuc rises in place (symmetric up/down).
+  if (opened && geneNucs()) return geneCenterHex(selected);
+  const gi = Math.floor(cursor);
+  const gf = cursor - gi;
+  const g2 = Math.min(GENES.length - 1, gi + 1);
+  return THREE.MathUtils.lerp(geneCenterHex(gi), geneCenterHex(g2), gf);
 }
 
-function ensurePlates() {
-  if (plates.length) return;
-  for (let i = 0; i < PLATE_COUNT; i++) {
-    const shade = i / (PLATE_COUNT - 1);
-    const L = 0.08 + shade * 0.78;
-    const mat = new THREE.MeshBasicMaterial({
-      color: new THREE.Color().setHSL(0.72, 0.05, L),
-      transparent: true,
-      opacity: 0.12,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-    });
-    const mesh = new THREE.Mesh(plateGeo, mat);
-    mesh.userData.baseL = L;
-    root.add(mesh);
-    plates.push(mesh);
-
-    const lm = new THREE.LineBasicMaterial({
-      color: new THREE.Color().setHSL(0.72, 0.04, Math.min(0.96, L + 0.16)),
-      transparent: true,
-      opacity: 0.72,
-    });
-    const line = new THREE.LineSegments(edgeGeo, lm);
-    line.userData.baseL = L;
-    root.add(line);
-    edges.push(line);
-  }
-
-  const g = new THREE.BoxGeometry(0.14, 0.14, 0.14);
-  GENES.forEach((_, i) => {
-    const m = new THREE.Mesh(
-      g,
-      new THREE.MeshBasicMaterial({
-        color: 0xffffff,
-        transparent: true,
-        opacity: 0.9,
-      })
-    );
-    m.rotation.z = Math.PI / 4;
-    m.userData.gene = i;
-    root.add(m);
-    geneMarkers.push(m);
-  });
-}
-
-function warpedTs(selT, spreadAmt) {
-  const n = PLATE_COUNT;
-  const weights = new Float64Array(n - 1);
-  let sumW = 0;
-  const sigma = 0.045 + spreadAmt * 0.04;
-  const boost = 1 + spreadAmt * 5.8;
-  for (let i = 0; i < n - 1; i++) {
-    const tMid = (i + 0.5) / (n - 1);
-    const d = tMid - selT;
-    const near = Math.exp(-(d * d) / (2 * sigma * sigma));
-    weights[i] = 1 + near * (boost - 1);
-    sumW += weights[i];
-  }
-  const ts = new Float64Array(n);
-  ts[0] = 0;
-  let acc = 0;
-  for (let i = 0; i < n - 1; i++) {
-    acc += weights[i] / sumW;
-    ts[i + 1] = Math.min(1, acc);
-  }
-  ts[n - 1] = 1;
-  return { ts, weights, sumW };
+/**
+ * Map a content/pad index onto the curve with the focused hex at t=0.5.
+ * Same look as before (curve + hexes + pads); only the focus tracking was wrong.
+ */
+function hexToT(hexIdx, focus, spreadAmt) {
+  const offset = hexIdx - focus;
+  const sigma = 2.2;
+  const boost = 1 + spreadAmt * 0.55;
+  const near = Math.exp(-(offset * offset) / (2 * sigma * sigma));
+  const spaced = offset * (1 + (boost - 1) * near * 0.5);
+  const step = 0.032;
+  return THREE.MathUtils.clamp(0.5 + spaced * step, 0.02, 0.98);
 }
 
 function sampleAt(tU) {
   const t = Math.max(0, Math.min(1, tU));
-  const f = t * (PLATE_COUNT - 1);
+  const f = t * (CURVE_SAMPLES - 1);
   const a = Math.floor(f);
-  const b = Math.min(PLATE_COUNT - 1, a + 1);
+  const b = Math.min(CURVE_SAMPLES - 1, a + 1);
   const u = f - a;
   return {
     pos: curve.getPointAt(t),
@@ -336,13 +321,6 @@ function sampleAt(tU) {
     t,
   };
 }
-
-const _m = new THREE.Matrix4();
-const _q = new THREE.Quaternion();
-const _x = new THREE.Vector3();
-const _y = new THREE.Vector3();
-const _z = new THREE.Vector3();
-const _tmp = new THREE.Vector3();
 
 function orient(obj, tan, normal, binormal) {
   _x.copy(tan).normalize();
@@ -358,104 +336,171 @@ function orient(obj, tan, normal, binormal) {
   obj.quaternion.copy(_q);
 }
 
-function layout() {
-  rebuildCurve(unfold);
-  ensurePlates();
-  const selT = geneT(cursor);
-  const { ts, weights, sumW } = warpedTs(selT, spread);
-  const avgW = sumW / (PLATE_COUNT - 1);
-  const visible = Math.floor(PLATE_COUNT * Math.max(0.12, unfold));
-  const nucs = opened ? geneNucs() : null;
-  const nucPlates = nucs ? nucleotidePlateIds(selected, nucs.length) : null;
+/** Pad fade — light→dark along strand, rim fade away from focus. */
+function hexStyle(hexIdx, focus, isPad) {
+  const offset = hexIdx - focus;
+  const along = THREE.MathUtils.clamp((hexIdx + PAD_EACH) / (CONTENT_COUNT + PAD_EACH * 2), 0, 1);
+  const baseL = THREE.MathUtils.lerp(0.72, 0.06, along);
+  const rim = Math.abs(offset) / (PAD_EACH + CONTENT_COUNT * 0.35);
+  const fade = 1 - Math.pow(Math.max(0, rim - 0.55) / 0.45, 1.15);
+  return { fade: Math.max(0, fade), L: baseL * Math.max(0, fade), isPad };
+}
 
-  for (let i = 0; i < PLATE_COUNT; i++) {
-    const mesh = plates[i];
-    const line = edges[i];
-    if (i >= visible) {
-      mesh.visible = false;
-      line.visible = false;
-      continue;
-    }
-    mesh.visible = true;
-    line.visible = true;
+function makeHexEntry(kind, meta) {
+  const mat = new THREE.MeshBasicMaterial({
+    color: new THREE.Color().setHSL(0.72, 0.05, 0.5),
+    transparent: true,
+    opacity: 0.12,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const mesh = new THREE.Mesh(plateGeo, mat);
+  mesh.userData = { ...meta, kind };
+  root.add(mesh);
+  const lm = new THREE.LineBasicMaterial({
+    color: new THREE.Color().setHSL(0.72, 0.04, 0.82),
+    transparent: true,
+    opacity: 0.72,
+  });
+  const line = new THREE.LineSegments(edgeGeo, lm);
+  root.add(line);
+  return { mesh, line };
+}
 
-    const frame = sampleAt(ts[i]);
-    const pos = frame.pos.clone();
-    const nearT = Math.abs(frame.t - selT);
-    const nucSlot = nucPlates ? nucPlates.indexOf(i) : -1;
-    const isNuc = nucSlot >= 0;
-    const isActiveNuc = isNuc && nucSlot === nucIndex;
-    const hot = nearT < 0.038 || isActiveNuc;
+function ensureHexes() {
+  if (contentHexes.length) return;
+  CONTENT.forEach(({ gene, slot, contentIdx }) => {
+    const shade = contentIdx / Math.max(1, CONTENT_COUNT - 1);
+    const L = 0.08 + shade * 0.78;
+    const { mesh, line } = makeHexEntry("content", { gene, slot, contentIdx });
+    mesh.userData.baseL = L;
+    line.userData.baseL = L;
+    contentHexes.push({ mesh, line });
+  });
+  for (let p = 0; p < PAD_EACH; p++) {
+    padHexes.push(makeHexEntry("pad", { side: "left", padIdx: p }));
+    padHexes.push(makeHexEntry("pad", { side: "right", padIdx: p }));
+  }
+}
 
-    if (flare > 0.01 && nearT < 0.13) {
-      const g = 1 - nearT / 0.13;
-      const side = frame.t < selT ? -1 : 1;
-      pos.addScaledVector(frame.binormal, side * g * g * flare * 1.75);
-    }
+function layoutHex(entry, hexIdx, focus, style) {
+  const { mesh, line } = entry;
+  const ud = mesh.userData;
+  const t = hexToT(hexIdx, focus, spread);
+  const frame = sampleAt(t);
+  const pos = frame.pos.clone();
+  const isContent = ud.kind === "content";
+  const gene = isContent ? ud.gene : -1;
+  const slotIdx = isContent ? ud.slot : -1;
+  const nucs = opened && gene === selected ? geneNucs() : null;
+  const isNuc = !!nucs && isContent;
+  const nucDist = isNuc ? Math.abs(slotIdx - nucCursor) : 1;
+  const isActiveNuc = isNuc && nucDist < 0.55;
+  const focusGene = Math.round(cursor);
+  const hot = isContent && (gene === focusGene || isActiveNuc);
+  const nearFocus = Math.abs(hexIdx - focus);
+  const activeAmt = isNuc ? Math.max(0, 1 - nucDist) : 0;
 
-    if (isNuc) {
-      pos.addScaledVector(frame.binormal, isActiveNuc ? 0.55 : 0.28);
-    }
-
-    const gap = i < PLATE_COUNT - 1 ? weights[i] / avgW : 1;
-    const s =
-      (0.72 + unfold * 0.48) *
-      (0.88 + Math.min(2.6, gap) * 0.17) *
-      (isActiveNuc ? 1.45 : isNuc ? 1.22 : hot ? 1.16 + Math.sin(performance.now() * 0.004) * 0.03 : 1);
-
-    mesh.position.copy(pos);
-    line.position.copy(pos);
-    orient(mesh, frame.tan, frame.normal, frame.binormal);
-    line.quaternion.copy(mesh.quaternion);
-    mesh.scale.setScalar(s);
-    line.scale.setScalar(s);
-
-    if (isActiveNuc) {
-      mesh.material.color.setHex(ACCENT);
-      mesh.material.opacity = 0.72;
-      line.material.color.setHex(ACCENT_HOT);
-      line.material.opacity = 1;
-    } else if (isNuc) {
-      mesh.material.color.setHex(ACCENT_HOT);
-      mesh.material.opacity = 0.38;
-      line.material.color.setHex(ACCENT);
-      line.material.opacity = 0.95;
-    } else if (hot) {
-      mesh.material.color.setHex(ACCENT);
-      mesh.material.opacity = 0.5;
-      line.material.color.setHex(ACCENT_HOT);
-      line.material.opacity = 1;
-    } else {
-      mesh.material.color.setHSL(0.72, 0.05, mesh.userData.baseL);
-      mesh.material.opacity = 0.05 + unfold * 0.14;
-      line.material.color.setHSL(0.72, 0.04, Math.min(0.96, mesh.userData.baseL + 0.14));
-      line.material.opacity = 0.28 + unfold * 0.55;
-    }
+  // Side-parting flare — skip while browsing Contact nucs
+  if (flare > 0.01 && nearFocus < 2.2 && !(opened && geneNucs())) {
+    const g = 1 - nearFocus / 2.2;
+    const side = hexIdx < focus ? -1 : 1;
+    pos.addScaledVector(frame.binormal, side * g * g * flare * 1.75);
+  }
+  if (isNuc) {
+    // Pure world-up lift — no helix slide / binormal so scroll up & down match
+    pos.y += THREE.MathUtils.lerp(0.08, 0.62, activeAmt);
   }
 
-  GENES.forEach((gene, gi) => {
-    const m = geneMarkers[gi];
-    const frame = sampleAt(geneT(gi));
-    m.position.copy(frame.pos);
-    const active = Math.round(cursor) === gi;
-    const hasNucs = !!gene.nucleotides?.length;
-    m.scale.setScalar(active ? 1.35 : hasNucs ? 1.05 : 0.85);
-    m.material.color.setHex(active ? ACCENT : hasNucs ? ACCENT_HOT : 0xffffff);
-    m.material.opacity = 0.55 + unfold * 0.45;
+  const gap = 1 + spread * Math.exp(-(nearFocus * nearFocus) / 8);
+  const s =
+    (0.95 + unfold * 0.55) *
+    (0.88 + Math.min(2.6, gap) * 0.17) *
+    (isNuc
+      ? THREE.MathUtils.lerp(1.18, 1.45, activeAmt)
+      : hot
+        ? 1.16 + Math.sin(performance.now() * 0.004) * 0.03
+        : 1) *
+    (0.88 + style.fade * 0.14);
+
+  mesh.position.copy(pos);
+  line.position.copy(pos);
+  orient(mesh, frame.tan, frame.normal, frame.binormal);
+  line.quaternion.copy(mesh.quaternion);
+  mesh.scale.setScalar(s);
+  line.scale.setScalar(s);
+
+  const alpha = style.fade * (0.05 + unfold * 0.14);
+  if (isNuc && activeAmt > 0.15) {
+    const a = activeAmt;
+    mesh.material.color.setHex(a > 0.65 ? ACCENT : ACCENT_HOT);
+    mesh.material.opacity = THREE.MathUtils.lerp(0.38, 0.72, a);
+    line.material.color.setHex(a > 0.65 ? ACCENT_HOT : ACCENT);
+    line.material.opacity = THREE.MathUtils.lerp(0.95, 1, a);
+  } else if (isNuc) {
+    mesh.material.color.setHex(ACCENT_HOT);
+    mesh.material.opacity = 0.38;
+    line.material.color.setHex(ACCENT);
+    line.material.opacity = 0.95;
+  } else if (hot) {
+    mesh.material.color.setHex(ACCENT);
+    mesh.material.opacity = 0.5;
+    line.material.color.setHex(ACCENT_HOT);
+    line.material.opacity = 1;
+  } else if (isContent) {
+    mesh.material.color.setHSL(0.72, 0.05, ud.baseL);
+    mesh.material.opacity = Math.max(alpha, 0.05 + unfold * 0.14);
+    line.material.color.setHSL(0.72, 0.04, Math.min(0.96, ud.baseL + 0.14));
+    line.material.opacity = 0.28 + unfold * 0.55;
+  } else {
+    mesh.material.color.setHSL(0.72, 0.05, style.L);
+    mesh.material.opacity = alpha * 0.85;
+    line.material.color.setHSL(0.72, 0.04, Math.min(0.9, style.L + 0.12));
+    line.material.opacity = style.fade * (0.18 + unfold * 0.4);
+  }
+
+  mesh.visible = style.fade > 0.03 && unfold > 0.06;
+  line.visible = mesh.visible;
+}
+
+function layout() {
+  rebuildCurve(unfold);
+  ensureHexes();
+
+  const focus = focusHex();
+  layoutFocus = focus;
+
+  contentHexes.forEach((entry) => {
+    const { contentIdx } = entry.mesh.userData;
+    const style = hexStyle(contentIdx, focus, false);
+    style.fade = 1;
+    layoutHex(entry, contentIdx, focus, style);
+  });
+
+  padHexes.forEach((entry) => {
+    const { side, padIdx } = entry.mesh.userData;
+    const hexIdx = side === "left" ? -(padIdx + 1) : CONTENT_COUNT + padIdx;
+    const style = hexStyle(hexIdx, focus, true);
+    layoutHex(entry, hexIdx, focus, style);
   });
 }
 
 function projectMarker() {
   if (!curve) return;
-  const nucs = opened ? geneNucs() : null;
-  let frame;
-  if (nucs) {
-    const ids = nucleotidePlateIds(selected, nucs.length);
-    const pi = ids[nucIndex] ?? ids[0];
-    frame = sampleAt(pi / (PLATE_COUNT - 1));
-  } else {
-    frame = sampleAt(geneT(cursor));
+  if (opened && geneNucs()) {
+    const entry = contentHexes[GENE_START[selected] + Math.round(nucCursor)];
+    if (entry) {
+      entry.mesh.getWorldPosition(_tmp);
+      _tmp.project(camera);
+      marker.style.left = `${(_tmp.x * 0.5 + 0.5) * innerWidth}px`;
+      marker.style.top = `${(-_tmp.y * 0.5 + 0.5) * innerHeight}px`;
+      marker.classList.toggle("on", unfold > 0.35 && _tmp.z < 1);
+      marker.classList.toggle("opened", opened);
+      return;
+    }
   }
+  const focus = layoutFocus ?? focusHex();
+  const frame = sampleAt(hexToT(focus, focus, spread));
   _tmp.copy(frame.pos).project(camera);
   marker.style.left = `${(_tmp.x * 0.5 + 0.5) * innerWidth}px`;
   marker.style.top = `${(-_tmp.y * 0.5 + 0.5) * innerHeight}px`;
@@ -588,6 +633,7 @@ function openPanel() {
   }
   opened = true;
   nucIndex = 0;
+  nucCursor = 0;
   flareTarget = 1;
   spreadTarget = 1;
   panel.hidden = false;
@@ -602,6 +648,7 @@ function openPanel() {
 function closePanel() {
   opened = false;
   nucIndex = 0;
+  nucCursor = 0;
   flareTarget = 0;
   spreadTarget = browsing ? 1 : 0.3;
   panel.classList.remove("is-open");
@@ -623,10 +670,12 @@ function setNuc(i) {
   const next = Math.max(0, Math.min(nucs.length - 1, i));
   if (next === nucIndex) return;
   nucIndex = next;
-  flareTarget = 0.7;
-  setTimeout(() => {
-    if (opened) flareTarget = 1;
-  }, 180);
+  if (!reduceMotion) {
+    // No directional flare pulse — keep motion as a clean focus slide
+    spreadTarget = 1;
+  } else {
+    nucCursor = next;
+  }
   syncPanel();
   updateHud(false);
 }
@@ -657,70 +706,51 @@ function setTarget(i) {
 function pickFromPointer(clientX, clientY) {
   const rect = renderer.domElement.getBoundingClientRect();
   const v = new THREE.Vector3();
-  let best = 0;
+  let bestGene = selected;
+  let bestSlot = 0;
   let bestD = Infinity;
-  for (let i = 0; i < geneMarkers.length; i++) {
-    v.copy(geneMarkers[i].position).project(camera);
+  let hit = false;
+
+  for (const { mesh } of contentHexes) {
+    if (!mesh.visible) continue;
+    v.copy(mesh.position).project(camera);
     const sx = (v.x * 0.5 + 0.5) * rect.width;
     const sy = (-v.y * 0.5 + 0.5) * rect.height;
     const d = Math.hypot(sx - (clientX - rect.left), sy - (clientY - rect.top));
     if (d < bestD) {
       bestD = d;
-      best = i;
-    }
-  }
-  let plateBest = 0;
-  let plateD = Infinity;
-  for (let i = 0; i < plates.length; i++) {
-    if (!plates[i].visible) continue;
-    v.copy(plates[i].position).project(camera);
-    const sx = (v.x * 0.5 + 0.5) * rect.width;
-    const sy = (-v.y * 0.5 + 0.5) * rect.height;
-    const d = Math.hypot(sx - (clientX - rect.left), sy - (clientY - rect.top));
-    if (d < plateD) {
-      plateD = d;
-      plateBest = i;
+      bestGene = mesh.userData.gene;
+      bestSlot = mesh.userData.slot;
+      hit = true;
     }
   }
 
   const nucs = opened ? geneNucs() : null;
-  if (nucs) {
-    const ids = nucleotidePlateIds(selected, nucs.length);
-    let nucBest = 0;
-    let nucD = Infinity;
-    ids.forEach((pi, ni) => {
-      v.copy(plates[pi].position).project(camera);
-      const sx = (v.x * 0.5 + 0.5) * rect.width;
-      const sy = (-v.y * 0.5 + 0.5) * rect.height;
-      const d = Math.hypot(sx - (clientX - rect.left), sy - (clientY - rect.top));
-      if (d < nucD) {
-        nucD = d;
-        nucBest = ni;
-      }
-    });
-    return { gene: selected, nuc: nucBest, dist: Math.min(nucD, plateD), mode: "nuc" };
+  if (nucs && hit && bestGene === selected) {
+    return { gene: selected, nuc: bestSlot, dist: bestD, mode: "nuc" };
   }
-
-  if (bestD < 50) return { gene: best, dist: bestD, mode: "gene" };
-  const t = plateBest / (PLATE_COUNT - 1);
-  return { gene: geneFromT(t), dist: plateD, mode: "gene" };
+  if (hit && bestD < 95) return { gene: bestGene, dist: bestD, mode: "gene" };
+  return { gene: selected, dist: bestD, mode: "miss" };
 }
 
 function onPointerMove(e) {
   if (unfold < 0.4) return;
   const pick = pickFromPointer(e.clientX, e.clientY);
-  browsing = pick.dist < 120;
+  browsing = pick.dist < 120 && pick.mode !== "miss";
   spreadTarget = browsing || opened ? 1 : 0.3;
   renderer.domElement.style.cursor = browsing ? "ew-resize" : "default";
 
-  if (!browsing) return;
+  if (!browsing || pointerNavLocked()) return;
+
+  // Don't fight an in-progress nuc slide
+  if (opened && geneNucs() && Math.abs(nucIndex - nucCursor) > 0.12) return;
 
   if (opened && pick.mode === "nuc" && pick.nuc != null) {
     if (pick.nuc !== nucIndex) setNuc(pick.nuc);
     return;
   }
 
-  if (!opened && pick.gene !== selected) {
+  if (!opened && pick.mode === "gene" && pick.gene !== selected) {
     setTarget(pick.gene);
   }
 }
@@ -734,7 +764,7 @@ function onPointerLeave() {
 function onClick(e) {
   if (unfold < 0.6) return;
   const pick = pickFromPointer(e.clientX, e.clientY);
-  if (pick.dist > 140) {
+  if (pick.dist > 140 || pick.mode === "miss") {
     if (opened) closePanel();
     return;
   }
@@ -758,21 +788,31 @@ function onClick(e) {
 
 let wheelLock = 0;
 let wheelLastDir = 0;
+/** Ignore pointer gene/nuc picks while keyboard/wheel travel settles. */
+let pointerNavLock = 0;
 const WHEEL_COOLDOWN_MS = 280;
+const POINTER_NAV_LOCK_MS = 320;
+
+function lockPointerNav() {
+  pointerNavLock = performance.now() + POINTER_NAV_LOCK_MS;
+}
+
+function pointerNavLocked() {
+  return performance.now() < pointerNavLock;
+}
 
 function onWheel(e) {
   e.preventDefault();
   if (unfold < 0.4) return;
-  // Dominant axis — avoids trackpad diagonal flipping scroll-up into scroll-down
   const useY = Math.abs(e.deltaY) >= Math.abs(e.deltaX);
   const delta = useY ? e.deltaY : e.deltaX;
   if (Math.abs(delta) < 1.5) return;
   const dir = delta > 0 ? 1 : -1;
   const now = performance.now();
-  // Allow immediate reverse; only throttle repeats in the same direction
   if (dir === wheelLastDir && now < wheelLock) return;
   wheelLastDir = dir;
   wheelLock = now + WHEEL_COOLDOWN_MS;
+  lockPointerNav();
   if (opened && geneNucs()) {
     setNuc(nucIndex + dir);
     return;
@@ -784,6 +824,7 @@ function onWheel(e) {
 function onKey(e) {
   if (e.key === "ArrowRight" || e.key === "ArrowDown") {
     e.preventDefault();
+    lockPointerNav();
     if (opened && geneNucs()) setNuc(nucIndex + 1);
     else {
       setTarget(selected + 1);
@@ -791,6 +832,7 @@ function onKey(e) {
     }
   } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
     e.preventDefault();
+    lockPointerNav();
     if (opened && geneNucs()) setNuc(nucIndex - 1);
     else {
       setTarget(selected - 1);
@@ -831,19 +873,28 @@ function tick(now) {
   flare += (flareTarget - flare) * (reduceMotion ? 1 : 0.1);
   spread += (spreadTarget - spread) * (reduceMotion ? 1 : 0.12);
 
-  // Always lerp — including mouse browse — so gene changes travel along the strand
   if (!reduceMotion) {
     cursor += (selected - cursor) * (browsing ? 0.16 : 0.1);
     if (Math.abs(selected - cursor) < 0.001) cursor = selected;
+    if (opened && geneNucs()) {
+      nucCursor += (nucIndex - nucCursor) * 0.14;
+      if (Math.abs(nucIndex - nucCursor) < 0.001) nucCursor = nucIndex;
+    } else {
+      nucCursor = nucIndex;
+    }
   } else {
     cursor = selected;
+    nucCursor = nucIndex;
   }
 
   const t = now * 0.00028;
-  camera.position.x = Math.sin(t) * 0.35;
-  camera.position.y = 0.2 + Math.cos(t * 0.7) * 0.18;
-  camera.lookAt(0, 0.1, 0);
-  root.rotation.y = Math.sin(t * 0.5) * 0.07;
+  camera.position.x = 0.2 + Math.sin(t) * 0.3;
+  camera.position.y = 0.35 + Math.cos(t * 0.7) * 0.12;
+  camera.position.z = 18.5;
+  camera.lookAt(0, 0.05, 0);
+  root.rotation.x = STRAND_POSE.x;
+  root.rotation.y = STRAND_POSE.y + Math.sin(t * 0.5) * 0.05;
+  root.rotation.z = STRAND_POSE.z;
 
   deco.children.forEach((m) => {
     m.position.y += Math.sin(now * 0.001 + m.userData.phase) * 0.001;
@@ -858,6 +909,7 @@ function tick(now) {
 
 document.getElementById("panel-close").addEventListener("click", closePanel);
 document.getElementById("btn-prev").addEventListener("click", () => {
+  lockPointerNav();
   if (opened && geneNucs()) setNuc(nucIndex - 1);
   else {
     setTarget(selected - 1);
@@ -865,6 +917,7 @@ document.getElementById("btn-prev").addEventListener("click", () => {
   }
 });
 document.getElementById("btn-next").addEventListener("click", () => {
+  lockPointerNav();
   if (opened && geneNucs()) setNuc(nucIndex + 1);
   else {
     setTarget(selected + 1);
@@ -898,7 +951,7 @@ addEventListener("resize", resize);
 
 addDecor();
 resize();
-ensurePlates();
+ensureHexes();
 rebuildCurve(0.08);
 updateHud(true);
 requestAnimationFrame(() => {
