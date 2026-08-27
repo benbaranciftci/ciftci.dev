@@ -6,7 +6,7 @@ const GENES = [
     id: "about",
     region: "ABOUT",
     year: "NOW",
-    name: "ORIGIN",
+    name: "Origin",
     sync: "BIO",
     blurb:
       "Computer engineering student split between Torino and Istanbul. I write software, tinker with robots, and ship small games — learning by building, then building again.",
@@ -20,16 +20,39 @@ const GENES = [
     id: "alfred",
     region: "WORK",
     year: "2024",
-    name: "ALFRED",
-    sync: "LOCKED",
-    locked: true,
-    blurb: "Selected work — Alfred. Coming soon.",
+    name: "aIfred",
+    sync: "SOON",
+    logo: "assets/alfred-logo.jpg",
+    logoAlt: "aIfred",
+    blurb: "Local operator — talks on the machine. No cloud. Coming soon.",
+    facts: [
+      ["Type", "personal AI operator"],
+      ["Status", "private · working on it"],
+      ["Stack", "on-device · no API key"],
+    ],
+  },
+  {
+    id: "unimind",
+    region: "WORK",
+    year: "2025",
+    name: "unimind",
+    sync: "LIVE",
+    href: "https://unimind.consulting/",
+    logo: "assets/unimind-logo.png",
+    logoAlt: "unimind",
+    blurb:
+      "Personalized university rankings — build a ranking around your priorities: academics, cost, outcomes, and fit.",
+    facts: [
+      ["Live", "unimind.consulting"],
+      ["Focus", "university rankings · admissions data"],
+      ["Role", "co-founder / developer"],
+    ],
   },
   {
     id: "site",
     region: "WORK",
     year: "2026",
-    name: "CIFTCI.DEV",
+    name: "ciftci.dev",
     sync: "LIVE",
     href: "https://ciftci.dev/",
     blurb: "Personal site. Selected work.",
@@ -38,7 +61,7 @@ const GENES = [
     id: "robotics",
     region: "WORK",
     year: "—",
-    name: "ROBOTICS",
+    name: "Robotics",
     sync: "LOCKED",
     locked: true,
     blurb: "Selected work — Robotics. Coming soon.",
@@ -47,7 +70,7 @@ const GENES = [
     id: "games",
     region: "WORK",
     year: "—",
-    name: "GAMES",
+    name: "Games",
     sync: "LOCKED",
     locked: true,
     blurb: "Selected work — Games. Coming soon.",
@@ -56,25 +79,25 @@ const GENES = [
     id: "signal",
     region: "CONTACT",
     year: "NOW",
-    name: "SIGNAL",
+    name: "Signal",
     sync: "OPEN",
     blurb: "Ways to reach me — pick a nucleotide on the strand.",
     nucleotides: [
       {
         id: "github",
-        name: "GITHUB",
+        name: "GitHub",
         blurb: "GitHub · benbaranciftci",
         href: "https://github.com/benbaranciftci",
       },
       {
         id: "linkedin",
-        name: "LINKEDIN",
+        name: "LinkedIn",
         blurb: "LinkedIn · Baran Çiftçi",
         href: "https://www.linkedin.com/in/baran-%C3%A7ift%C3%A7i-a004b9283",
       },
       {
         id: "email",
-        name: "EMAIL",
+        name: "Email",
         blurb: "Email · baran@ciftci.dev",
         href: "mailto:baran@ciftci.dev",
       },
@@ -103,6 +126,8 @@ const panelBody = document.getElementById("panel-body");
 const panelFacts = document.getElementById("panel-facts");
 const panelCta = document.getElementById("panel-cta");
 const panelKicker = document.getElementById("panel-kicker");
+const panelLogo = document.getElementById("panel-logo");
+const panelLogoImg = document.getElementById("panel-logo-img");
 const mount = document.getElementById("strand");
 
 let selected = 0;
@@ -471,6 +496,7 @@ function fillFacts(g) {
 function setCta(href) {
   if (!href) {
     panelCta.hidden = true;
+    panelCta.removeAttribute("href");
     return;
   }
   panelCta.hidden = false;
@@ -478,6 +504,18 @@ function setCta(href) {
   panelCta.target = href.startsWith("http") ? "_blank" : "_self";
   panelCta.rel = href.startsWith("http") ? "noopener noreferrer" : "";
   panelCta.textContent = "Enter";
+}
+
+function setLogo(logo, alt) {
+  if (!logo) {
+    panelLogo.hidden = true;
+    panelLogoImg.removeAttribute("src");
+    panelLogoImg.alt = "";
+    return;
+  }
+  panelLogo.hidden = false;
+  panelLogoImg.src = logo;
+  panelLogoImg.alt = alt || "";
 }
 
 function updateHud(instant) {
@@ -496,11 +534,11 @@ function updateHud(instant) {
   if (nuc) {
     syncLabel.textContent = "NUC";
     syncVal.textContent = String(nucIndex + 1).padStart(2, "0");
-    regionSub.textContent = "NUCLEOTIDE";
+    regionSub.textContent = "Nucleotide";
   } else {
     syncLabel.textContent = "GEN";
     syncVal.textContent = String(selected + 1).padStart(2, "0");
-    regionSub.textContent = "GENE";
+    regionSub.textContent = "Gene";
   }
   regionLabel.textContent = g.region;
   if (opened && nucs) {
@@ -527,6 +565,7 @@ function syncPanel() {
     panelBody.textContent = nuc.blurb;
     panelFacts.hidden = true;
     panelFacts.innerHTML = "";
+    setLogo(null);
     setCta(nuc.href);
     return;
   }
@@ -534,7 +573,8 @@ function syncPanel() {
   panelTitle.textContent = g.name;
   panelBody.textContent = g.blurb;
   fillFacts(g);
-  if (g.locked || !g.href) setCta(null);
+  setLogo(g.logo, g.logoAlt || g.name);
+  if (!g.href) setCta(null);
   else setCta(g.href);
 }
 
@@ -551,7 +591,10 @@ function openPanel() {
   flareTarget = 1;
   spreadTarget = 1;
   panel.hidden = false;
+  panel.classList.remove("is-open");
+  void panel.offsetWidth;
   requestAnimationFrame(() => panel.classList.add("is-open"));
+  document.body.classList.add("memory-open");
   syncPanel();
   updateHud(true);
 }
@@ -562,9 +605,10 @@ function closePanel() {
   flareTarget = 0;
   spreadTarget = browsing ? 1 : 0.3;
   panel.classList.remove("is-open");
+  document.body.classList.remove("memory-open");
   setTimeout(() => {
     if (!opened) panel.hidden = true;
-  }, 300);
+  }, 320);
   updateHud(true);
 }
 
@@ -705,8 +749,11 @@ function onClick(e) {
   const same = pick.gene === selected;
   setTarget(pick.gene);
   if (reduceMotion) cursor = pick.gene;
-  if (same) togglePanel();
-  else openPanel();
+  if (same) {
+    togglePanel();
+  } else if (!GENES[pick.gene].locked) {
+    openPanel();
+  }
 }
 
 let wheelLock = 0;

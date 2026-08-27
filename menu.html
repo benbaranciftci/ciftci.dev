@@ -23,7 +23,7 @@
     <div id="hud" class="hud">
       <div class="hud-tl" id="hud-tl">
         <p class="year"><span class="arrow">›</span> <span id="year">NOW</span></p>
-        <p class="name" id="mem-name">ORIGIN</p>
+        <p class="name" id="mem-name">Origin</p>
         <p class="hint" id="hint">Browse genes along the strand</p>
       </div>
       <div class="hud-sync" id="sync-box">
@@ -32,7 +32,7 @@
       </div>
       <div class="hud-tr">
         <p id="region-label">ABOUT</p>
-        <p class="region-sub" id="region-sub">GENE</p>
+        <p class="region-sub" id="region-sub">Gene</p>
       </div>
       <div class="marker" id="marker" aria-hidden="true">
         <span class="marker-line"></span>
@@ -42,11 +42,14 @@
 
     <aside id="memory-panel" class="memory-panel" hidden>
       <button type="button" class="panel-close" id="panel-close">Close</button>
+      <div class="panel-logo" id="panel-logo" hidden>
+        <img id="panel-logo-img" src="" alt="" />
+      </div>
       <p class="panel-kicker" id="panel-kicker">Gene</p>
       <h2 class="panel-title" id="panel-title">—</h2>
       <p class="panel-body" id="panel-body"></p>
       <dl class="panel-facts" id="panel-facts" hidden></dl>
-      <a class="panel-cta" id="panel-cta" href="#">Enter</a>
+      <a class="panel-cta" id="panel-cta" href="#" hidden>Enter</a>
     </aside>
 
     <footer class="bar">

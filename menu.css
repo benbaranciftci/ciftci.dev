@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
 
 :root {
   --bg: #e6e2eb;
@@ -6,7 +6,7 @@
   --mute: #6a6276;
   --accent: #7113d7;
   --accent-hot: #9b4aef;
-  --font: "Exo 2", "Segoe UI", system-ui, sans-serif;
+  --font: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
 }
 
 *,
@@ -73,9 +73,12 @@ body.dna-body {
 }
 
 .region-sub {
-  margin-top: 0.15rem;
-  opacity: 0.75;
-  font-size: 0.65rem;
+  margin-top: 0.2rem;
+  opacity: 0.65;
+  font-size: 0.7rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .hud-tl {
@@ -94,11 +97,11 @@ body.dna-body {
 }
 
 .year {
-  font-size: 0.95rem;
+  font-size: 0.78rem;
   font-weight: 500;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.02em;
   color: var(--mute);
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.15rem;
 }
 
 .year .arrow {
@@ -108,18 +111,21 @@ body.dna-body {
 }
 
 .name {
-  font-size: clamp(1.35rem, 3vw, 2rem);
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  font-size: clamp(1.85rem, 5vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  text-transform: none;
 }
 
 .hint {
-  margin-top: 0.45rem;
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  margin-top: 0.55rem;
+  max-width: 18rem;
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.4;
+  text-transform: none;
   color: var(--accent);
 }
 
@@ -149,17 +155,17 @@ body.dna-body {
 }
 
 .sync-top {
-  font-size: 1.35rem;
+  font-size: 1.15rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.04em;
   line-height: 1;
 }
 
 .sync-bot {
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   font-weight: 500;
-  letter-spacing: 0.08em;
-  opacity: 0.95;
+  letter-spacing: 0.02em;
+  opacity: 0.9;
 }
 
 .hud-tr {
@@ -167,9 +173,9 @@ body.dna-body {
   top: clamp(1.25rem, 4vh, 2.5rem);
   right: clamp(1.25rem, 4vw, 2.75rem);
   text-align: right;
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.2em;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   color: var(--mute);
   line-height: 1.35;
   text-transform: uppercase;
@@ -209,12 +215,12 @@ body.dna-body {
   border: 1px solid rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(14px);
   box-shadow: 0 12px 40px rgba(60, 30, 100, 0.12);
-  transform: translateY(-50%) translateX(18px);
+  transform: translateY(-50%) translateX(22px);
   opacity: 0;
   pointer-events: none;
   transition:
-    opacity 0.32s ease,
-    transform 0.32s ease;
+    opacity 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .memory-panel.is-open {
@@ -228,10 +234,10 @@ body.dna-body {
   border: 0;
   background: transparent;
   font: inherit;
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--mute);
   cursor: pointer;
   margin-bottom: 0.85rem;
@@ -242,20 +248,46 @@ body.dna-body {
   color: var(--accent);
 }
 
+.panel-logo {
+  margin: 0 0 1rem;
+  height: 3.25rem;
+  padding: 0;
+  background: #000;
+  border: 1px solid rgba(80, 60, 110, 0.18);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.panel-logo img {
+  display: block;
+  width: 80%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+.panel-logo[hidden],
+.panel-cta[hidden] {
+  display: none !important;
+}
+
 .panel-kicker {
   font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.2em;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--accent);
   margin-bottom: 0.35rem;
 }
 
 .panel-title {
-  font-size: 1.35rem;
+  font-size: clamp(1.35rem, 3vw, 1.65rem);
   font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+  text-transform: none;
   margin-bottom: 0.75rem;
 }
 
@@ -283,10 +315,10 @@ body.dna-body {
 }
 
 .panel-facts dt {
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: none;
   color: var(--mute);
 }
 
@@ -297,10 +329,10 @@ body.dna-body {
 
 .panel-cta {
   display: inline-block;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-transform: none;
   text-decoration: none;
   color: #fff;
   background: var(--accent);
@@ -378,10 +410,10 @@ body.memory-open .hud-sync {
   background: rgba(255, 255, 255, 0.55);
   backdrop-filter: blur(10px);
   border-top: 1px solid rgba(255, 255, 255, 0.7);
-  font-size: 0.68rem;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--mute);
   pointer-events: auto;
 }
@@ -399,10 +431,10 @@ body.memory-open .hud-sync {
   border: 0;
   background: transparent;
   font: inherit;
-  font-size: 0.68rem;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--mute);
   cursor: pointer;
   padding: 0.25rem 0.15rem;
@@ -447,7 +479,7 @@ body.memory-open .hud-sync {
 .leave {
   color: var(--ink);
   text-decoration: none;
-  letter-spacing: 0.12em;
+  letter-spacing: 0;
   pointer-events: auto;
 }
 
@@ -488,7 +520,7 @@ body.memory-open .hud-sync {
     width: auto;
     top: auto;
     bottom: 4.5rem;
-    transform: translateY(12px);
+    transform: translateY(14px);
   }
 
   .memory-panel.is-open {
@@ -510,5 +542,9 @@ body.memory-open .hud-sync {
 @media (prefers-reduced-motion: reduce) {
   .marker {
     transition: none;
+  }
+
+  .memory-panel {
+    transition: opacity 0.2s ease;
   }
 }
