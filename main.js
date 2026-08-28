@@ -73,6 +73,8 @@ const GENES = [
     sync: "LOCKED",
     hexes: 3,
     locked: true,
+    logo: "assets/coming-soon-logo.jpg",
+    logoAlt: "robotics",
     blurb: "Selected work — robotics. Coming soon.",
   },
   {
@@ -83,6 +85,8 @@ const GENES = [
     sync: "LOCKED",
     hexes: 3,
     locked: true,
+    logo: "assets/coming-soon-logo.jpg",
+    logoAlt: "games",
     blurb: "Selected work — games. Coming soon.",
   },
   {
@@ -91,7 +95,7 @@ const GENES = [
     year: "NOW",
     name: "contact",
     sync: "OPEN",
-    blurb: "Ways to reach me — scroll or use → to switch.",
+    blurb: "Ways to reach me — move along the strand or use →.",
     nucleotides: [
       {
         id: "github",
@@ -120,10 +124,23 @@ const GENES = [
         blurb: "Email · baran@ciftci.dev",
         href: "mailto:baran@ciftci.dev",
         cta: "Send email",
+        logo: "assets/email-logo.svg",
+        logoAlt: "Email",
+        logoPad: true,
       },
     ],
   },
 ];
+
+const SCROLL_STOPS = [];
+GENES.forEach((g, gi) => {
+  const nucs = g.nucleotides;
+  if (nucs?.length) {
+    nucs.forEach((_, ni) => SCROLL_STOPS.push({ gene: gi, nuc: ni }));
+  } else {
+    SCROLL_STOPS.push({ gene: gi, nuc: 0 });
+  }
+});
 
 const ACCENT_THEMES = {
   light: {
@@ -334,6 +351,16 @@ let worldStepPx = 0;
 let lastTickMs = 0;
 let secHeightPx = 0;
 let worldSecs = [];
+/** Single travel axis — wheel, keys, and clicks all write here; visuals read it. */
+let focus = 0;
+let focusInputUntil = 0;
+let lastAppliedStop = -1;
+let contactAimStop = null;
+const FOCUS_PX_PER_UNIT = 300;
+const FOCUS_SETTLE_MS = 180;
+const FOCUS_SETTLE_RATE = 10;
+const CONTACT_GLIDE_RATE = 4.2;
+const CONTACT_PANEL_COMMIT = 0.22;
 
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(theme.fog, theme.fogNear, theme.fogFar);
@@ -560,13 +587,14 @@ function layoutHex(entry, hexIdx, focus, style) {
   const isContent = ud.kind === "content";
   const gene = isContent ? ud.gene : -1;
   const slotIdx = isContent ? ud.slot : -1;
+  const focusGene = Math.round(cursor);
+  const geneNucsLocal = gene >= 0 ? GENES[gene]?.nucleotides : null;
   const atContact =
-    gene === selected && geneNucs() && Math.abs(cursor - selected) < 0.45;
-  const nucs = atContact ? geneNucs() : null;
+    gene === focusGene && geneNucsLocal && Math.abs(cursor - focusGene) < 0.45;
+  const nucs = atContact ? geneNucsLocal : null;
   const isNuc = !!nucs && isContent;
   const nucDist = isNuc ? Math.abs(slotIdx - nucCursor) : 1;
   const isActiveNuc = isNuc && nucDist < 0.55;
-  const focusGene = Math.round(cursor);
   const hot = isContent && (gene === focusGene || isActiveNuc);
   const nearFocus = Math.abs(hexIdx - focus);
   const activeAmt = isNuc ? Math.max(0, 1 - nucDist) : 0;
@@ -769,13 +797,15 @@ function applyWorldScroll() {
 }
 
 function applyWorldDots() {
-  const g = currentGene();
-  const nucs = geneNucs(g);
-  const sec = worldSecs[selected];
+  const focusGene = Math.round(THREE.MathUtils.clamp(cursor, 0, GENES.length - 1));
+  const g = GENES[focusGene];
+  const nucs = g?.nucleotides;
+  const sec = worldSecs[focusGene];
   if (!sec) return;
   const dots = sec.querySelectorAll(".world-dot");
   if (!dots.length) return;
-  const idx = nucs && Math.abs(cursor - selected) < 0.45 ? Math.round(nucCursor) : -1;
+  const onContact = nucs && Math.abs(cursor - focusGene) < 0.45;
+  const idx = onContact ? Math.round(nucCursor) : -1;
   dots.forEach((dot, i) => {
     const on = idx >= 0 && i === idx;
     dot.classList.toggle("is-active", on);
@@ -784,33 +814,53 @@ function applyWorldDots() {
 }
 
 function applyWorldOpacity() {
+  const focusGene = Math.round(THREE.MathUtils.clamp(cursor, 0, GENES.length - 1));
   worldSecs.forEach((el, i) => {
     const d = Math.abs(cursor - i);
-    const focus = Math.max(0, 1 - d * 0.58);
-    const opacity = 0.3 + focus * 0.7;
-    const scale = 0.94 + focus * 0.06;
+    const focusAmt = Math.max(0, 1 - d * 0.58);
+    const opacity = 0.3 + focusAmt * 0.7;
+    const scale = 0.94 + focusAmt * 0.06;
     el.style.opacity = String(opacity);
     el.style.transform = `scale(${scale.toFixed(3)})`;
     el.classList.toggle("is-active", d < 0.22);
-    el.classList.toggle("is-adjacent", Math.abs(i - selected) === 1);
+    el.classList.toggle("is-adjacent", Math.abs(i - focusGene) === 1);
   });
 }
 
-function stepWorld(dt) {
-  if (!worldEl || !worldTrack) return;
-  const nuc =
-    geneNucs() && Math.abs(cursor - selected) < 0.45 ? nucCursor : 0;
-  const target = geneScrollY(cursor, nuc);
-  if (reduceMotion) {
-    worldY = target;
-  } else {
-    const alpha = 1 - Math.exp(-9 * dt);
-    worldY += (target - worldY) * alpha;
-    if (Math.abs(target - worldY) < 0.15) worldY = target;
+function updateWorldLabels() {
+  const gi = Math.round(THREE.MathUtils.clamp(cursor, 0, GENES.length - 1));
+  const g = GENES[gi];
+  if (!g) return;
+  const nucs = g.nucleotides;
+  const onContact = nucs && Math.abs(cursor - gi) < 0.45;
+  const nuc = onContact
+    ? nucs[Math.round(THREE.MathUtils.clamp(nucCursor, 0, nucs.length - 1))]
+    : null;
+  const sec = worldSecs[gi];
+  if (!sec) return;
+  const meta = worldSideMeta(g, nuc);
+  const title = sec.querySelector(".world-title");
+  const sync = sec.querySelector(".world-sync");
+  const detail = sec.querySelector(".world-detail");
+  if (title) title.textContent = nuc ? nuc.name : g.name;
+  if (sync) {
+    sync.textContent = meta.sync;
+    sync.classList.toggle("is-locked", !!g.locked && !nuc);
   }
+  if (detail) detail.textContent = meta.detail;
+}
+
+function stepWorld() {
+  if (!worldEl || !worldTrack) return;
+  const focusGene = Math.round(THREE.MathUtils.clamp(cursor, 0, GENES.length - 1));
+  const nucs = GENES[focusGene]?.nucleotides;
+  const onContact = nucs && Math.abs(cursor - focusGene) < 0.45;
+  const nuc = onContact ? nucCursor : 0;
+  worldY = geneScrollY(cursor, nuc);
   applyWorldScroll();
   applyWorldOpacity();
   applyWorldDots();
+  updateWorldLabels();
 }
 
 function fillFacts(g) {
@@ -873,32 +923,19 @@ function updateHud() {
   if (nucs) {
     const hasMore = nucIndex < nucs.length - 1;
     const hasPrev = nucIndex > 0;
-    if (hasMore && hasPrev) hintEl.textContent = "Scroll or ← → for contacts · Enter opens";
-    else if (hasMore) hintEl.textContent = "Scroll or → for next contact · Enter opens";
-    else if (hasPrev) hintEl.textContent = "Scroll or ← for previous · Enter opens";
+    if (hasMore && hasPrev) hintEl.textContent = "Move to switch contact · Enter opens";
+    else if (hasMore) hintEl.textContent = "Keep moving for next contact · Enter opens";
+    else if (hasPrev) hintEl.textContent = "Move back for previous contact · Enter opens";
     else hintEl.textContent = "Enter opens link";
   } else if (g.locked) {
     hintEl.textContent = "Locked gene";
   } else if (g.href) {
-    hintEl.textContent = "Scroll the strand · Enter opens link";
+    hintEl.textContent = "Move along the strand · Enter opens link";
   } else {
-    hintEl.textContent = "Browse genes along the strand";
+    hintEl.textContent = "Move along the strand";
   }
   hintEl.classList.toggle("locked", !!g.locked);
 
-  const sec = worldSecs[selected];
-  if (sec) {
-    const title = sec.querySelector(".world-title");
-    const sync = sec.querySelector(".world-sync");
-    const detail = sec.querySelector(".world-detail");
-    const meta = worldSideMeta(g, nuc);
-    if (title) title.textContent = nuc ? nuc.name : g.name;
-    if (sync) {
-      sync.textContent = meta.sync;
-      sync.classList.toggle("is-locked", !!g.locked && !nuc);
-    }
-    if (detail) detail.textContent = meta.detail;
-  }
   applyWorldDots();
 }
 
@@ -1014,19 +1051,96 @@ function activateCta() {
   window.open(href, href.startsWith("http") ? "_blank" : "_self");
 }
 
-function setNuc(i) {
-  const nucs = geneNucs();
-  if (!nucs?.length) return;
-  const next = Math.max(0, Math.min(nucs.length - 1, i));
-  if (next === nucIndex) return;
-  nucIndex = next;
-  if (!reduceMotion) {
-    spreadTarget = 1;
-  } else {
-    nucCursor = next;
+function selectionToFocus(gene, nuc = 0) {
+  const idx = SCROLL_STOPS.findIndex((s) => s.gene === gene && s.nuc === nuc);
+  return idx >= 0 ? idx : 0;
+}
+
+function stopToVisual(stopIdx) {
+  const { gene, nuc } = SCROLL_STOPS[stopIdx];
+  const nucs = GENES[gene]?.nucleotides;
+  if (nucs?.length > 1) {
+    return {
+      cursor: gene + (nuc / (nucs.length - 1)) * 0.1,
+      nucCursor: nuc,
+    };
   }
-  syncPanel();
+  return { cursor: gene, nucCursor: 0 };
+}
+
+function focusToVisual(pos) {
+  const max = SCROLL_STOPS.length - 1;
+  const clamped = THREE.MathUtils.clamp(pos, 0, max);
+  const i0 = Math.floor(clamped);
+  const i1 = Math.min(i0 + 1, max);
+  const t = clamped - i0;
+  const a = stopToVisual(i0);
+  const b = stopToVisual(i1);
+  return {
+    cursor: THREE.MathUtils.lerp(a.cursor, b.cursor, t),
+    nucCursor: THREE.MathUtils.lerp(a.nucCursor, b.nucCursor, t),
+  };
+}
+
+function syncFocusVisuals() {
+  const v = focusToVisual(focus);
+  cursor = v.cursor;
+  nucCursor = v.nucCursor;
+}
+
+function applySelectionFromFocus() {
+  const max = SCROLL_STOPS.length - 1;
+  const rawStop = Math.round(THREE.MathUtils.clamp(focus, 0, max));
+  const rawGene = SCROLL_STOPS[rawStop].gene;
+  let stop = rawStop;
+  if (GENES[rawGene]?.nucleotides && Math.abs(focus - rawStop) > CONTACT_PANEL_COMMIT) {
+    stop = lastAppliedStop >= 0 ? lastAppliedStop : rawStop;
+  }
+  if (stop === lastAppliedStop) return;
+  lastAppliedStop = stop;
+  const { gene, nuc } = SCROLL_STOPS[stop];
+  const geneChanged = gene !== selected;
+  selected = gene;
+  nucIndex = nuc;
+  if (geneChanged) pulseTravel();
+  else spreadTarget = 1;
+  applyPanelContent();
   updateHud();
+}
+
+function clearContactAim() {
+  contactAimStop = null;
+}
+
+function aimContactStop(stopIdx) {
+  const clamped = THREE.MathUtils.clamp(stopIdx, 0, SCROLL_STOPS.length - 1);
+  if (contactAimStop === clamped) return;
+  contactAimStop = clamped;
+  focusInputUntil = performance.now() + FOCUS_SETTLE_MS;
+  spreadTarget = 1;
+}
+
+function setFocusToStop(stopIdx) {
+  clearContactAim();
+  focus = THREE.MathUtils.clamp(stopIdx, 0, SCROLL_STOPS.length - 1);
+  focusInputUntil = performance.now() + FOCUS_SETTLE_MS;
+  syncFocusVisuals();
+  lastAppliedStop = -1;
+  applySelectionFromFocus();
+  spreadTarget = 1;
+}
+
+function nudgeFocus(dir) {
+  const next = Math.round(focus) + dir;
+  if (next < 0 || next >= SCROLL_STOPS.length) return;
+  if (next === Math.round(focus)) return;
+  setFocusToStop(next);
+}
+
+function markFocusInput() {
+  clearContactAim();
+  focusInputUntil = performance.now() + FOCUS_SETTLE_MS;
+  spreadTarget = 1;
 }
 
 function pulseTravel() {
@@ -1036,31 +1150,6 @@ function pulseTravel() {
   setTimeout(() => {
     flareTarget = 0;
   }, 220);
-}
-
-function setTarget(i) {
-  const next = Math.max(0, Math.min(GENES.length - 1, i));
-  if (next === selected) return;
-  selected = next;
-  nucIndex = 0;
-  nucCursor = 0;
-  pulseTravel();
-  syncPanel();
-  if (reduceMotion) cursor = next;
-  updateHud();
-}
-
-function stepContactOrGene(dir) {
-  const nucs = geneNucs();
-  if (nucs?.length) {
-    const next = nucIndex + dir;
-    if (next >= 0 && next < nucs.length) {
-      setNuc(next);
-      return;
-    }
-  }
-  setTarget(selected + dir);
-  spreadTarget = 1;
 }
 
 function pickFromPointer(clientX, clientY) {
@@ -1085,9 +1174,11 @@ function pickFromPointer(clientX, clientY) {
     }
   }
 
-  const nucs = bestGene === selected ? geneNucs() : null;
-  if (nucs && hit && bestGene === selected) {
-    return { gene: selected, nuc: bestSlot, dist: bestD, mode: "nuc" };
+  const nucs = GENES[bestGene]?.nucleotides;
+  const onContact =
+    nucs && hit && Math.abs(cursor - bestGene) < 0.45;
+  if (onContact) {
+    return { gene: bestGene, nuc: bestSlot, dist: bestD, mode: "nuc" };
   }
   if (hit && bestD < 95) return { gene: bestGene, dist: bestD, mode: "gene" };
   return { gene: selected, dist: bestD, mode: "miss" };
@@ -1095,16 +1186,30 @@ function pickFromPointer(clientX, clientY) {
 
 function onWorldClick(e) {
   if (introActive || unfold < 0.6) return;
+
+  const dot = e.target.closest(".world-dot");
+  if (dot) {
+    const sec = dot.closest(".world-sec");
+    const gi = worldSecs.indexOf(sec);
+    const dots = sec ? [...sec.querySelectorAll(".world-dot")] : [];
+    const ni = dots.indexOf(dot);
+    if (gi >= 0 && ni >= 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      setFocusToStop(selectionToFocus(gi, ni));
+    }
+    return;
+  }
+
   const title = e.target.closest(".world-title");
   if (!title) return;
   const sec = title.closest(".world-sec");
   if (!sec) return;
   const i = worldSecs.indexOf(sec);
-  if (i < 0) return;
+  if (i < 0 || i === selected) return;
   e.preventDefault();
   e.stopPropagation();
-  if (i === selected || Math.abs(i - selected) !== 1) return;
-  setTarget(i);
+  setFocusToStop(selectionToFocus(i, 0));
 }
 
 function onPointerMove(e) {
@@ -1114,8 +1219,8 @@ function onPointerMove(e) {
   spreadTarget = browsing || geneNucs() ? 1 : 0.3;
   renderer.domElement.style.cursor = browsing ? "pointer" : "default";
 
-  if (pick.mode === "nuc" && pick.gene === selected && pick.dist < 110) {
-    setNuc(pick.nuc);
+  if (pick.mode === "nuc" && pick.dist < 100 && performance.now() > focusInputUntil) {
+    aimContactStop(selectionToFocus(pick.gene, pick.nuc));
   }
 }
 
@@ -1130,8 +1235,8 @@ function onClick(e) {
   const pick = pickFromPointer(e.clientX, e.clientY);
   if (pick.dist > 140 || pick.mode === "miss") return;
 
-  if (pick.mode === "nuc" && pick.gene === selected) {
-    setNuc(pick.nuc);
+  if (pick.mode === "nuc") {
+    setFocusToStop(selectionToFocus(pick.gene, pick.nuc));
     activateCta();
     return;
   }
@@ -1141,16 +1246,8 @@ function onClick(e) {
     return;
   }
 
-  setTarget(pick.gene);
-  if (reduceMotion) cursor = pick.gene;
+  setFocusToStop(selectionToFocus(pick.gene, 0));
 }
-
-let wheelAccum = 0;
-let lastStepAt = 0;
-let gestureStepped = false;
-const MIN_REARM_MS = 45;
-const STRONG_FLICK = 28;
-const WHEEL_STEP_PX = 350;
 
 function onWheel(e) {
   if (e.target.closest?.("#memory-panel")) return;
@@ -1166,27 +1263,12 @@ function onWheel(e) {
   else if (e.deltaMode === 2) delta *= worldEl?.clientHeight || innerHeight;
   if (Math.abs(delta) < 0.5) return;
 
-  const now = performance.now();
-
-  if (gestureStepped) {
-    const newSwipe =
-      Math.abs(delta) >= STRONG_FLICK && now - lastStepAt >= MIN_REARM_MS;
-    if (!newSwipe) return;
-    gestureStepped = false;
-    wheelAccum = 0;
-  }
-
-  if (wheelAccum !== 0 && Math.sign(delta) !== Math.sign(wheelAccum)) {
-    wheelAccum = 0;
-  }
-  wheelAccum += delta;
-  if (Math.abs(wheelAccum) < WHEEL_STEP_PX) return;
-
-  const dir = wheelAccum > 0 ? 1 : -1;
-  lastStepAt = now;
-  gestureStepped = true;
-  wheelAccum = 0;
-  stepContactOrGene(dir);
+  focus += delta / FOCUS_PX_PER_UNIT;
+  focus = THREE.MathUtils.clamp(focus, 0, SCROLL_STOPS.length - 1);
+  if (reduceMotion) focus = Math.round(focus);
+  markFocusInput();
+  syncFocusVisuals();
+  applySelectionFromFocus();
 }
 
 function onKey(e) {
@@ -1205,16 +1287,18 @@ function onKey(e) {
   }
   if (e.key === "ArrowRight" || e.key === "ArrowDown") {
     e.preventDefault();
-    stepContactOrGene(1);
+    nudgeFocus(1);
   } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
     e.preventDefault();
-    stepContactOrGene(-1);
+    nudgeFocus(-1);
   } else if (e.key === "Enter" || e.key === " ") {
     e.preventDefault();
     activateCta();
   } else if (e.key === "Escape") {
     e.preventDefault();
-    if (geneNucs() && nucIndex > 0) setNuc(0);
+    if (geneNucs() && nucIndex > 0) {
+      setFocusToStop(selectionToFocus(selected, 0));
+    }
   }
 }
 
@@ -1238,18 +1322,40 @@ function tick(now) {
   flare += (flareTarget - flare) * (reduceMotion ? 1 : 0.1);
   spread += (spreadTarget - spread) * (reduceMotion ? 1 : 0.12);
 
-  if (!reduceMotion) {
-    cursor += (selected - cursor) * (browsing ? 0.16 : 0.1);
-    if (Math.abs(selected - cursor) < 0.001) cursor = selected;
-    if (geneNucs()) {
-      nucCursor += (nucIndex - nucCursor) * 0.14;
-      if (Math.abs(nucIndex - nucCursor) < 0.001) nucCursor = nucIndex;
+  if (contactAimStop !== null) {
+    if (reduceMotion) {
+      focus = contactAimStop;
+      clearContactAim();
     } else {
-      nucCursor = nucIndex;
+      const d = contactAimStop - focus;
+      if (Math.abs(d) < 0.006) {
+        focus = contactAimStop;
+        clearContactAim();
+      } else {
+        focus += d * (1 - Math.exp(-CONTACT_GLIDE_RATE * dt));
+      }
     }
-  } else {
-    cursor = selected;
-    nucCursor = nucIndex;
+    syncFocusVisuals();
+    applySelectionFromFocus();
+  } else if (!reduceMotion && performance.now() > focusInputUntil) {
+    const snap = Math.round(focus);
+    const d = snap - focus;
+    if (Math.abs(d) > 0.0005) {
+      focus += d * (1 - Math.exp(-FOCUS_SETTLE_RATE * dt));
+      syncFocusVisuals();
+      applySelectionFromFocus();
+    } else if (focus !== snap) {
+      focus = snap;
+      syncFocusVisuals();
+      applySelectionFromFocus();
+    }
+  } else if (reduceMotion) {
+    const snap = Math.round(focus);
+    if (focus !== snap) {
+      focus = snap;
+      syncFocusVisuals();
+      applySelectionFromFocus();
+    }
   }
 
   const t = now * 0.00028;
@@ -1267,7 +1373,7 @@ function tick(now) {
   });
 
   layout();
-  stepWorld(dt);
+  stepWorld();
   stepPanelTilt();
   renderer.render(scene, camera);
   if (introActive && introPhase === "load" && loadMarks.scene && !loadMarks.frame) {
@@ -1277,10 +1383,10 @@ function tick(now) {
 }
 
 document.getElementById("btn-prev").addEventListener("click", () => {
-  stepContactOrGene(-1);
+  nudgeFocus(-1);
 });
 document.getElementById("btn-next").addEventListener("click", () => {
-  stepContactOrGene(1);
+  nudgeFocus(1);
 });
 document.getElementById("btn-select").addEventListener("click", () => {
   activateCta();
@@ -1350,13 +1456,12 @@ buildWorldPage();
 resize();
 ensureHexes();
 rebuildCurve(0.08);
-updateHud();
+focus = 0;
+syncFocusVisuals();
+lastAppliedStop = -1;
+applySelectionFromFocus();
 measureWorldTravel();
-worldY = geneScrollY(selected);
-applyWorldScroll();
-applyWorldOpacity();
-applyWorldDots();
-syncPanel(true);
+stepWorld();
 document.body.classList.add("memory-open");
 
 function setIntroPct(p) {
