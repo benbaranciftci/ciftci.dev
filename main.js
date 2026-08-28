@@ -399,16 +399,18 @@ function makeCurve(openAmt) {
   for (let i = 0; i < n; i++) {
     const t = i / (n - 1);
     let x = THREE.MathUtils.lerp(-9.5, 9.5, t);
-    x -= 3.0 * (1 - THREE.MathUtils.smoothstep(t, 0, 0.18));
+    x -= 4.2 * (1 - THREE.MathUtils.smoothstep(t, 0, 0.17));
     x += 3.0 * THREE.MathUtils.smoothstep(t, 0.82, 1);
-    const y0 = THREE.MathUtils.lerp(-0.85, 1.05, t);
-    const w1 = Math.sin(t * Math.PI * 2.2) * 1.65 * openAmt;
-    const w2 = Math.sin(t * Math.PI * 1.25 + 0.8) * 0.7 * openAmt;
+    const y0 = THREE.MathUtils.lerp(-0.95, 1.05, t);
+    const leftLift = (1 - THREE.MathUtils.smoothstep(t, 0, 0.34)) * 2.35;
+    const w1Taper = THREE.MathUtils.lerp(0.72, 1, THREE.MathUtils.smoothstep(t, 0.08, 0.3));
+    const w1 = Math.sin(t * Math.PI * 2.2) * 1.65 * openAmt * w1Taper;
+    const w2 = Math.sin(t * Math.PI * 1.25 + 0.8) * 0.7 * openAmt * 0.85;
     const w3 = Math.cos(t * Math.PI * 2.4 + 0.25) * 0.2 * openAmt;
     const z =
       Math.sin(t * Math.PI * 1.85 + 0.4) * 1.55 * openAmt +
       Math.cos(t * Math.PI * 1.0) * 0.55 * openAmt;
-    pts.push(new THREE.Vector3(x, y0 + w1 + w2 + w3, z));
+    pts.push(new THREE.Vector3(x, y0 + leftLift + w1 + w2 + w3, z));
   }
   return new THREE.CatmullRomCurve3(pts, false, "centripetal");
 }
