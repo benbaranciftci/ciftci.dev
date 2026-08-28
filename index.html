@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta
       name="description"
       content="Baran Çiftçi. Developer and computer engineering student. Torino and Istanbul."
@@ -46,6 +46,7 @@
           <span class="intro-pct" id="intro-pct">0%</span>
           <span class="duo intro-duo" aria-hidden="true"></span>
         </div>
+        <p class="intro-skip-hint">Tap anywhere to skip</p>
       </div>
       <div class="intro-split" id="intro-split" hidden>
         <div class="intro-half intro-half-top" aria-hidden="true">
@@ -76,17 +77,24 @@
       </div>
     </div>
 
-    <aside id="memory-panel" class="memory-panel">
+    <aside id="memory-panel" class="memory-panel" data-sheet="peek">
       <span class="panel-corner panel-corner-tl" aria-hidden="true"></span>
       <span class="panel-corner panel-corner-tr" aria-hidden="true"></span>
       <span class="panel-corner panel-corner-bl" aria-hidden="true"></span>
       <span class="panel-corner panel-corner-br" aria-hidden="true"></span>
+      <button type="button" class="panel-grab" id="panel-grab" aria-expanded="false" aria-label="Expand details">
+        <span class="panel-grab-bar" aria-hidden="true"></span>
+      </button>
       <div class="panel-inner" id="panel-inner">
         <div class="panel-logo panel-slot is-collapsed" id="panel-logo">
           <img id="panel-logo-img" src="" alt="" />
         </div>
-        <p class="panel-kicker" id="panel-kicker">Gene</p>
-        <h2 class="panel-title" id="panel-title">—</h2>
+        <div class="panel-head">
+          <div class="panel-head-copy">
+            <p class="panel-kicker" id="panel-kicker">Gene</p>
+            <h2 class="panel-title" id="panel-title">—</h2>
+          </div>
+        </div>
         <p class="panel-body" id="panel-body"></p>
         <dl class="panel-facts panel-slot is-collapsed" id="panel-facts"></dl>
         <a class="panel-cta panel-slot is-collapsed" id="panel-cta" href="#">Enter</a>
@@ -96,13 +104,20 @@
     <footer class="bar">
       <div class="bar-left">
         <span class="duo" aria-hidden="true"></span>
-        <span>DNA</span>
+        <span class="bar-label">DNA</span>
         <button type="button" class="bar-btn" id="btn-theme" aria-pressed="false">Dark</button>
       </div>
+      <div class="bar-rail" id="bar-rail" role="tablist" aria-label="Genes"></div>
       <div class="bar-right">
-        <button type="button" class="bar-btn" id="btn-prev"><kbd>←</kbd> Prev</button>
-        <button type="button" class="bar-btn" id="btn-next"><kbd>→</kbd> Next</button>
-        <button type="button" class="bar-btn" id="btn-select"><kbd>↵</kbd> Open</button>
+        <button type="button" class="bar-btn" id="btn-prev" aria-label="Previous">
+          <kbd>←</kbd><span class="bar-btn-text"> Prev</span>
+        </button>
+        <button type="button" class="bar-btn" id="btn-next" aria-label="Next">
+          <kbd>→</kbd><span class="bar-btn-text"> Next</span>
+        </button>
+        <button type="button" class="bar-btn bar-btn-open" id="btn-select" aria-label="Open link">
+          <kbd>↵</kbd><span class="bar-btn-text"> Open</span>
+        </button>
       </div>
     </footer>
 

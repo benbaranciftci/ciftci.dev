@@ -146,33 +146,33 @@ const ACCENT_THEMES = {
   light: {
     accent: 0x7113d7,
     accentHot: 0x9b4aef,
-    fog: 0xe8e2ef,
-    fogNear: 12,
-    fogFar: 40,
-    ambient: 1.15,
-    key: 0xffffff,
-    keyI: 0.45,
+    fog: 0xddd6e8,
+    fogNear: 13,
+    fogFar: 38,
+    ambient: 1.0,
+    key: 0xeee4ff,
+    keyI: 0.42,
     h: 0.72,
-    sMesh: 0.05,
-    sLine: 0.04,
-    padL0: 0.72,
-    padL1: 0.06,
-    contentL0: 0.08,
-    contentL1: 0.78,
-    meshOp: 0.12,
-    lineOp: 0.72,
-    contentOp: 0.05,
-    contentOpU: 0.14,
-    contentLineOp: 0.28,
-    contentLineOpU: 0.55,
-    padOp: 0.85,
-    padLine: 0.18,
-    padLineU: 0.4,
-    lineLift: 0.14,
-    lineCap: 0.96,
-    padLift: 0.12,
-    padCap: 0.9,
-    decor: 0xffffff,
+    sMesh: 0.08,
+    sLine: 0.09,
+    padL0: 0.64,
+    padL1: 0.08,
+    contentL0: 0.12,
+    contentL1: 0.72,
+    meshOp: 0.15,
+    lineOp: 0.78,
+    contentOp: 0.07,
+    contentOpU: 0.16,
+    contentLineOp: 0.32,
+    contentLineOpU: 0.58,
+    padOp: 0.82,
+    padLine: 0.22,
+    padLineU: 0.44,
+    lineLift: 0.16,
+    lineCap: 0.94,
+    padLift: 0.14,
+    padCap: 0.88,
+    decor: 0x000000,
     decorOp: 0.12,
   },
   dark: {
@@ -222,6 +222,8 @@ let ACCENT_HOT = theme.accentHot;
 const PAD_EACH = 16;
 const CURVE_SAMPLES = 180;
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const mobileMq = matchMedia("(max-width: 640px)");
+let isMobileLayout = mobileMq.matches;
 
 const CONTENT = [];
 const GENE_START = [];
@@ -250,6 +252,14 @@ const panelCta = document.getElementById("panel-cta");
 const panelKicker = document.getElementById("panel-kicker");
 const panelLogo = document.getElementById("panel-logo");
 const panelLogoImg = document.getElementById("panel-logo-img");
+const panelGrab = document.getElementById("panel-grab");
+const barRail = document.getElementById("bar-rail");
+const SHEET_SNAPS = ["peek", "full"];
+const SHEET_DRAG_THRESHOLD = 36;
+let sheetSnap = "peek";
+let sheetDragY = null;
+let sheetDragSnap = "peek";
+let hintDismissed = false;
 const PANEL_REST = { rx: 5, ry: -8, tz: 6 };
 let panelSwapTimer = 0;
 let panelHeightTimer = 0;
@@ -357,8 +367,13 @@ let focusInputUntil = 0;
 let lastAppliedStop = -1;
 let contactAimStop = null;
 const FOCUS_PX_PER_UNIT = 300;
+const FOCUS_PX_PER_UNIT_TOUCH = 220;
 const FOCUS_SETTLE_MS = 180;
 const FOCUS_SETTLE_RATE = 10;
+const TOUCH_DRAG_THRESHOLD = 10;
+let touchDragY = null;
+let touchMoved = false;
+let suppressClickUntil = 0;
 const CONTACT_GLIDE_RATE = 4.2;
 const CONTACT_PANEL_COMMIT = 0.22;
 
@@ -370,7 +385,7 @@ camera.position.set(0.2, 0.35, 18.5);
 
 const STRAND_POSE = { x: -0.08, y: 0.12, z: -0.05 };
 
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+const renderer = new THREE.WebGLRenderer({ antialias: !isMobileLayout, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setClearColor(0x000000, 0);
 mount.appendChild(renderer.domElement);
@@ -693,16 +708,47 @@ function layout() {
 
 function addDecor() {
   const g = new THREE.BoxGeometry(0.06, 0.06, 0.06);
-  for (let i = 0; i < 30; i++) {
+  const count = isMobileLayout ? 20 : 50;
+  const minDist = isMobileLayout ? 1.7 : 1.45;
+  const maxAttempts = 50;
+  const placed = [];
+
+  for (let i = 0; i < count; i++) {
+    let pos = null;
+    let bestMin = -1;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const candidate = {
+        x: (Math.random() - 0.5) * 20,
+        y: (Math.random() - 0.5) * 11,
+        z: (Math.random() - 0.5) * 9,
+      };
+      if (!placed.length) {
+        pos = candidate;
+        break;
+      }
+
+      let nearest = Infinity;
+      for (const p of placed) {
+        const d = Math.hypot(candidate.x - p.x, candidate.y - p.y, candidate.z - p.z);
+        if (d < nearest) nearest = d;
+      }
+      if (nearest >= minDist) {
+        pos = candidate;
+        break;
+      }
+      if (nearest > bestMin) {
+        bestMin = nearest;
+        pos = candidate;
+      }
+    }
+
+    placed.push(pos);
     const m = new THREE.Mesh(
       g,
       new THREE.MeshBasicMaterial({ color: theme.decor, transparent: true, opacity: theme.decorOp })
     );
-    m.position.set(
-      (Math.random() - 0.5) * 20,
-      (Math.random() - 0.5) * 11,
-      (Math.random() - 0.5) * 9
-    );
+    m.position.set(pos.x, pos.y, pos.z);
     m.rotation.z = Math.PI / 4;
     m.userData.phase = Math.random() * 6;
     deco.add(m);
@@ -778,9 +824,18 @@ function geneScrollY(geneIdx, nucIdx = 0) {
 
 function measureWorldTravel() {
   if (!worldEl || !worldTrack || !worldSecs.length) return;
-  const h = Math.max(1, worldEl.clientHeight);
+  let h;
+  let step;
+  if (isMobileLayout) {
+    const vp = worldEl.querySelector(".world-viewport");
+    h = Math.max(1, vp?.clientHeight || 200);
+    step = Math.max(96, Math.round(h * 0.58));
+  } else {
+    h = Math.max(1, worldEl.clientHeight);
+    step = Math.max(112, Math.round(h * 0.36));
+  }
   worldSecHeight = h;
-  worldStepPx = Math.max(112, Math.round(h * 0.36));
+  worldStepPx = step;
   worldTrack.style.paddingTop = "0";
   worldTrack.style.paddingBottom = "0";
   worldSecs.forEach((el, i) => {
@@ -904,6 +959,97 @@ function setLogo(logo, alt, bg, full, pad) {
   panelLogo.classList.toggle("is-padded", !!pad);
 }
 
+function dismissHint() {
+  if (hintDismissed || !isMobileLayout || !hintEl) return;
+  hintDismissed = true;
+  hintEl.classList.add("is-hidden");
+}
+
+function buildGeneRail() {
+  if (!barRail) return;
+  barRail.innerHTML = GENES.map(
+    (g, i) =>
+      `<button type="button" class="rail-dot" data-gene="${i}" role="tab" aria-label="${g.name}" aria-selected="false"></button>`
+  ).join("");
+  barRail.addEventListener("click", (e) => {
+    const btn = e.target.closest(".rail-dot");
+    if (!btn) return;
+    dismissHint();
+    setFocusToStop(selectionToFocus(Number(btn.dataset.gene), 0));
+  });
+}
+
+function updateGeneRail() {
+  if (!barRail) return;
+  barRail.querySelectorAll(".rail-dot").forEach((btn, i) => {
+    const active = i === selected;
+    btn.classList.toggle("is-active", active);
+    btn.setAttribute("aria-selected", active ? "true" : "false");
+  });
+}
+
+function setSheetSnap(next, { force = false } = {}) {
+  if (!panel) return;
+  const snap = SHEET_SNAPS.includes(next) ? next : "peek";
+  if (!force && snap === sheetSnap) return;
+  sheetSnap = snap;
+  panel.dataset.sheet = snap;
+  panel.classList.remove("is-sheet-dragging");
+  if (panelGrab) {
+    panelGrab.setAttribute("aria-expanded", snap !== "peek" ? "true" : "false");
+    panelGrab.setAttribute(
+      "aria-label",
+      snap === "peek" ? "Expand details" : "Collapse details"
+    );
+  }
+}
+
+function resetSheetSnap() {
+  setSheetSnap("peek", { force: true });
+}
+
+function cycleSheetSnap() {
+  const i = SHEET_SNAPS.indexOf(sheetSnap);
+  setSheetSnap(SHEET_SNAPS[(i + 1) % SHEET_SNAPS.length]);
+}
+
+function sheetSnapFromDrag(dy) {
+  const i = SHEET_SNAPS.indexOf(sheetDragSnap);
+  if (dy <= -SHEET_DRAG_THRESHOLD && i < SHEET_SNAPS.length - 1) {
+    return SHEET_SNAPS[i + 1];
+  }
+  if (dy >= SHEET_DRAG_THRESHOLD && i > 0) {
+    return SHEET_SNAPS[i - 1];
+  }
+  return sheetDragSnap;
+}
+
+function onDocumentClick(e) {
+  if (!isMobileLayout || introActive || sheetSnap !== "full") return;
+  if (e.target.closest("#memory-panel")) return;
+  resetSheetSnap();
+}
+
+function syncSheetChrome() {
+  if (!panel) return;
+  if (!isMobileLayout) {
+    panel.removeAttribute("data-sheet");
+    panel.classList.remove("is-sheet-dragging");
+    return;
+  }
+  setSheetSnap(sheetSnap, { force: true });
+}
+
+function syncMobileLayout() {
+  document.documentElement.classList.toggle("is-mobile", isMobileLayout);
+  if (!isMobileLayout) resetSheetSnap();
+  syncSheetChrome();
+  updateGeneRail();
+  measureWorldTravel();
+  applyWorldScroll();
+  if (isMobileLayout) requestAnimationFrame(measureWorldTravel);
+}
+
 function updateHud() {
   const g = currentGene();
   const nucs = geneNucs(g);
@@ -923,20 +1069,30 @@ function updateHud() {
   if (nucs) {
     const hasMore = nucIndex < nucs.length - 1;
     const hasPrev = nucIndex > 0;
-    if (hasMore && hasPrev) hintEl.textContent = "Move to switch contact · Enter opens";
+    if (isMobileLayout) {
+      if (hasMore && hasPrev) hintEl.textContent = "Drag to browse contacts";
+      else if (hasMore) hintEl.textContent = "Drag down for next contact";
+      else if (hasPrev) hintEl.textContent = "Drag up for previous contact";
+      else hintEl.textContent = "Pull card up for details";
+    } else if (hasMore && hasPrev) hintEl.textContent = "Move to switch contact · Enter opens";
     else if (hasMore) hintEl.textContent = "Keep moving for next contact · Enter opens";
     else if (hasPrev) hintEl.textContent = "Move back for previous contact · Enter opens";
     else hintEl.textContent = "Enter opens link";
   } else if (g.locked) {
     hintEl.textContent = "Locked gene";
   } else if (g.href) {
-    hintEl.textContent = "Move along the strand · Enter opens link";
+    hintEl.textContent = isMobileLayout
+      ? "Drag to browse · Pull card up for details"
+      : "Move along the strand · Enter opens link";
   } else {
-    hintEl.textContent = "Move along the strand";
+    hintEl.textContent = isMobileLayout
+      ? "Drag to browse · Pull card up for details"
+      : "Move along the strand";
   }
   hintEl.classList.toggle("locked", !!g.locked);
 
   applyWorldDots();
+  updateGeneRail();
 }
 
 function applyPanelContent() {
@@ -1102,6 +1258,7 @@ function applySelectionFromFocus() {
   const geneChanged = gene !== selected;
   selected = gene;
   nucIndex = nuc;
+  if (geneChanged && isMobileLayout) resetSheetSnap();
   if (geneChanged) pulseTravel();
   else spreadTarget = 1;
   applyPanelContent();
@@ -1131,6 +1288,7 @@ function setFocusToStop(stopIdx) {
 }
 
 function nudgeFocus(dir) {
+  dismissHint();
   const next = Math.round(focus) + dir;
   if (next < 0 || next >= SCROLL_STOPS.length) return;
   if (next === Math.round(focus)) return;
@@ -1232,21 +1390,39 @@ function onPointerLeave() {
 
 function onClick(e) {
   if (introActive || unfold < 0.6) return;
+  if (performance.now() < suppressClickUntil) return;
+  dismissHint();
   const pick = pickFromPointer(e.clientX, e.clientY);
-  if (pick.dist > 140 || pick.mode === "miss") return;
+  const hitRadius = isMobileLayout ? 175 : 140;
+  if (pick.dist > hitRadius || pick.mode === "miss") return;
 
   if (pick.mode === "nuc") {
     setFocusToStop(selectionToFocus(pick.gene, pick.nuc));
-    activateCta();
+    if (!isMobileLayout) activateCta();
     return;
   }
 
   if (pick.gene === selected) {
-    activateCta();
+    if (!isMobileLayout) activateCta();
     return;
   }
 
   setFocusToStop(selectionToFocus(pick.gene, 0));
+}
+
+function isTouchScrollBlocked(target) {
+  return !!target?.closest?.(".bar, #memory-panel, .bar-btn, .panel-cta, .panel-inner, .panel-grab");
+}
+
+function applyFocusDelta(delta, pxPerUnit = FOCUS_PX_PER_UNIT) {
+  if (Math.abs(delta) < 0.5) return;
+  dismissHint();
+  focus += delta / pxPerUnit;
+  focus = THREE.MathUtils.clamp(focus, 0, SCROLL_STOPS.length - 1);
+  if (reduceMotion) focus = Math.round(focus);
+  markFocusInput();
+  syncFocusVisuals();
+  applySelectionFromFocus();
 }
 
 function onWheel(e) {
@@ -1261,14 +1437,34 @@ function onWheel(e) {
   let delta = useY ? e.deltaY : e.deltaX;
   if (e.deltaMode === 1) delta *= 16;
   else if (e.deltaMode === 2) delta *= worldEl?.clientHeight || innerHeight;
-  if (Math.abs(delta) < 0.5) return;
+  applyFocusDelta(delta);
+}
 
-  focus += delta / FOCUS_PX_PER_UNIT;
-  focus = THREE.MathUtils.clamp(focus, 0, SCROLL_STOPS.length - 1);
-  if (reduceMotion) focus = Math.round(focus);
-  markFocusInput();
-  syncFocusVisuals();
-  applySelectionFromFocus();
+function onTouchStart(e) {
+  if (!isMobileLayout || introActive) return;
+  if (isTouchScrollBlocked(e.target)) return;
+  if (e.touches.length !== 1) return;
+  touchDragY = e.touches[0].clientY;
+  touchMoved = false;
+}
+
+function onTouchMove(e) {
+  if (touchDragY === null || introActive) return;
+  if (isTouchScrollBlocked(e.target)) return;
+  if (unfold < 0.4) return;
+  const y = e.touches[0].clientY;
+  const delta = touchDragY - y;
+  if (!touchMoved && Math.abs(delta) < TOUCH_DRAG_THRESHOLD) return;
+  touchMoved = true;
+  e.preventDefault();
+  applyFocusDelta(delta, FOCUS_PX_PER_UNIT_TOUCH);
+  touchDragY = y;
+}
+
+function onTouchEnd() {
+  if (touchMoved) suppressClickUntil = performance.now() + 350;
+  touchDragY = null;
+  touchMoved = false;
 }
 
 function onKey(e) {
@@ -1293,7 +1489,7 @@ function onKey(e) {
     nudgeFocus(-1);
   } else if (e.key === "Enter" || e.key === " ") {
     e.preventDefault();
-    activateCta();
+    if (!isMobileLayout) activateCta();
   } else if (e.key === "Escape") {
     e.preventDefault();
     if (geneNucs() && nucIndex > 0) {
@@ -1302,9 +1498,26 @@ function onKey(e) {
   }
 }
 
+function barInset() {
+  const bar = document.querySelector(".bar");
+  return bar?.offsetHeight || 48;
+}
+
+function syncPixelRatio() {
+  const cap = isMobileLayout ? 1.5 : 2;
+  renderer.setPixelRatio(Math.min(devicePixelRatio, cap));
+}
+
+function applyCameraProfile() {
+  camera.fov = isMobileLayout ? 40 : 34;
+  camera.updateProjectionMatrix();
+}
+
 function resize() {
   const w = innerWidth;
-  const h = Math.max(1, innerHeight - 48);
+  const h = Math.max(1, innerHeight - barInset());
+  syncPixelRatio();
+  applyCameraProfile();
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   renderer.setSize(w, h, false);
@@ -1359,12 +1572,17 @@ function tick(now) {
   }
 
   const t = now * 0.00028;
-  camera.position.x = 0.2 + Math.sin(t) * 0.3;
-  camera.position.y = 0.35 + Math.cos(t * 0.7) * 0.12;
-  camera.position.z = 18.5;
-  camera.lookAt(0, 0.05, 0);
+  const camSway = isMobileLayout ? 0.14 : 0.3;
+  const camYBase = isMobileLayout ? 0.58 : 0.35;
+  const camYWave = isMobileLayout ? 0.05 : 0.12;
+  const camZ = isMobileLayout ? 21.5 : 18.5;
+  const lookY = isMobileLayout ? 0.18 : 0.05;
+  camera.position.x = 0.2 + Math.sin(t) * camSway;
+  camera.position.y = camYBase + Math.cos(t * 0.7) * camYWave;
+  camera.position.z = camZ;
+  camera.lookAt(0, lookY, 0);
   root.rotation.x = STRAND_POSE.x;
-  root.rotation.y = STRAND_POSE.y + Math.sin(t * 0.5) * 0.05;
+  root.rotation.y = STRAND_POSE.y + Math.sin(t * 0.5) * (isMobileLayout ? 0.03 : 0.05);
   root.rotation.z = STRAND_POSE.z;
 
   deco.children.forEach((m) => {
@@ -1383,13 +1601,15 @@ function tick(now) {
 }
 
 document.getElementById("btn-prev").addEventListener("click", () => {
+  dismissHint();
   nudgeFocus(-1);
 });
 document.getElementById("btn-next").addEventListener("click", () => {
+  dismissHint();
   nudgeFocus(1);
 });
 document.getElementById("btn-select").addEventListener("click", () => {
-  activateCta();
+  if (!isMobileLayout) activateCta();
 });
 
 const themeBtn = document.getElementById("btn-theme");
@@ -1442,9 +1662,52 @@ renderer.domElement.addEventListener("pointermove", onPointerMove);
 renderer.domElement.addEventListener("pointerleave", onPointerLeave);
 renderer.domElement.addEventListener("click", onClick);
 worldTrack?.addEventListener("click", onWorldClick);
+document.addEventListener("click", onDocumentClick);
 document.addEventListener("wheel", onWheel, { passive: false });
+document.addEventListener("touchstart", onTouchStart, { passive: true });
+document.addEventListener("touchmove", onTouchMove, { passive: false });
+document.addEventListener("touchend", onTouchEnd, { passive: true });
+document.addEventListener("touchcancel", onTouchEnd, { passive: true });
 document.addEventListener("keydown", onKey);
 addEventListener("resize", resize);
+mobileMq.addEventListener("change", () => {
+  isMobileLayout = mobileMq.matches;
+  syncMobileLayout();
+  resize();
+  updateHud();
+});
+
+if (panelGrab) {
+  panelGrab.addEventListener("pointerdown", (e) => {
+    if (!isMobileLayout || e.button !== 0) return;
+    sheetDragY = e.clientY;
+    sheetDragSnap = sheetSnap;
+    panel?.classList.add("is-sheet-dragging");
+    panelGrab.setPointerCapture(e.pointerId);
+  });
+
+  panelGrab.addEventListener("pointerup", (e) => {
+    if (sheetDragY === null) return;
+    const dy = e.clientY - sheetDragY;
+    if (Math.abs(dy) < SHEET_DRAG_THRESHOLD) cycleSheetSnap();
+    else setSheetSnap(sheetSnapFromDrag(dy));
+    sheetDragY = null;
+    panel?.classList.remove("is-sheet-dragging");
+    try {
+      panelGrab.releasePointerCapture(e.pointerId);
+    } catch {
+      /* capture already released */
+    }
+  });
+
+  panelGrab.addEventListener("pointercancel", () => {
+    sheetDragY = null;
+    panel?.classList.remove("is-sheet-dragging");
+  });
+}
+
+buildGeneRail();
+syncMobileLayout();
 
 if (panel && panelTiltOk) {
   panel.addEventListener("pointermove", onPanelPointerMove);
