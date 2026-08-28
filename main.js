@@ -8,6 +8,9 @@ const GENES = [
     name: "origin",
     sync: "BIO",
     hexes: 5,
+    logo: "assets/origin.jpg",
+    logoAlt: "Baran Çiftçi",
+    logoFull: true,
     blurb:
       "Computer engineering student split between Torino and Istanbul. I write software, tinker with robots, and ship small games — learning by building, then building again.",
     facts: [
@@ -58,6 +61,8 @@ const GENES = [
     sync: "LIVE",
     hexes: 3,
     href: "https://ciftci.dev/",
+    logo: "assets/ciftci-dev-logo.jpg",
+    logoAlt: "ciftci.dev",
     blurb: "Personal site. Selected work.",
   },
   {
@@ -96,6 +101,7 @@ const GENES = [
         cta: "Open GitHub",
         logo: "assets/github-logo.svg",
         logoAlt: "GitHub",
+        logoPad: true,
       },
       {
         id: "linkedin",
@@ -103,9 +109,10 @@ const GENES = [
         blurb: "LinkedIn · Baran Çiftçi",
         href: "https://www.linkedin.com/in/baran-%C3%A7ift%C3%A7i-a004b9283",
         cta: "Open LinkedIn",
-        logo: "assets/linkedin-logo.svg",
+        logo: "assets/linkedin-logo-full.svg",
         logoAlt: "LinkedIn",
         logoBg: "light",
+        logoPad: true,
       },
       {
         id: "email",
@@ -214,7 +221,8 @@ const SLOT_COUNT = PAD_EACH * 2 + CONTENT_COUNT;
 
 const hintEl = document.getElementById("hint");
 const syncLabel = document.getElementById("sync-label");
-const syncVal = document.getElementById("sync-val");
+const syncNow = document.getElementById("sync-now");
+const syncTotal = document.getElementById("sync-total");
 const syncBox = document.getElementById("sync-box");
 const panel = document.getElementById("memory-panel");
 const panelInner = document.getElementById("panel-inner");
@@ -784,6 +792,7 @@ function applyWorldOpacity() {
     el.style.opacity = String(opacity);
     el.style.transform = `scale(${scale.toFixed(3)})`;
     el.classList.toggle("is-active", d < 0.22);
+    el.classList.toggle("is-adjacent", Math.abs(i - selected) === 1);
   });
 }
 
@@ -829,38 +838,38 @@ function setCta(href, label = "Enter") {
   panelCta.textContent = label;
 }
 
-function setLogo(logo, alt, bg) {
+function setLogo(logo, alt, bg, full, pad) {
   if (!logo) {
     panelLogo.classList.add("is-collapsed");
     panelLogoImg.removeAttribute("src");
     panelLogoImg.alt = "";
-    panelLogo.classList.remove("is-light");
+    panelLogo.classList.remove("is-light", "is-full", "is-padded");
     return;
   }
   panelLogo.classList.remove("is-collapsed");
   panelLogoImg.src = logo;
   panelLogoImg.alt = alt || "";
   panelLogo.classList.toggle("is-light", bg === "light" || bg === "white");
+  panelLogo.classList.toggle("is-full", !!full);
+  panelLogo.classList.toggle("is-padded", !!pad);
 }
 
-function updateHud(instant) {
+function updateHud() {
   const g = currentGene();
   const nucs = geneNucs(g);
   const nuc = nucs ? nucs[nucIndex] : null;
-  if (!instant) {
-    hintEl.classList.remove("flash");
-    syncBox.classList.remove("flash");
-    void hintEl.offsetWidth;
-    hintEl.classList.add("flash");
-    syncBox.classList.add("flash");
-  }
   if (nuc) {
-    syncLabel.textContent = "CONTACT";
-    syncVal.textContent = `${nucIndex + 1} / ${nucs.length}`;
+    syncLabel.textContent = "Contact";
+    syncLabel.hidden = false;
+    syncNow.textContent = String(nucIndex + 1);
+    syncTotal.textContent = String(nucs.length);
   } else {
-    syncLabel.textContent = "GEN";
-    syncVal.textContent = String(selected + 1).padStart(2, "0");
+    syncLabel.hidden = true;
+    syncNow.textContent = String(selected + 1).padStart(2, "0");
+    syncTotal.textContent = String(GENES.length).padStart(2, "0");
   }
+  syncBox.classList.toggle("is-contact", !!nuc);
+  syncBox.classList.toggle("is-locked", !!g.locked && !nuc);
   if (nucs) {
     const hasMore = nucIndex < nucs.length - 1;
     const hasPrev = nucIndex > 0;
@@ -905,7 +914,7 @@ function applyPanelContent() {
     panelBody.textContent = nuc.blurb;
     panelFacts.classList.add("is-collapsed");
     panelFacts.innerHTML = "";
-    setLogo(nuc.logo, nuc.logoAlt || nuc.name, nuc.logoBg);
+    setLogo(nuc.logo, nuc.logoAlt || nuc.name, nuc.logoBg, nuc.logoFull, nuc.logoPad);
     setCta(nuc.href, ctaLabelFor(nuc));
     return;
   }
@@ -915,7 +924,7 @@ function applyPanelContent() {
     panelTitle.textContent = g.name;
     panelBody.textContent = g.blurb;
     fillFacts(g);
-    setLogo(g.logo, g.logoAlt || g.name, g.logoBg);
+    setLogo(g.logo, g.logoAlt || g.name, g.logoBg, g.logoFull, g.logoPad);
     setCta(null);
     return;
   }
@@ -924,7 +933,7 @@ function applyPanelContent() {
   panelTitle.textContent = g.name;
   panelBody.textContent = g.blurb;
   fillFacts(g);
-  setLogo(g.logo, g.logoAlt || g.name, g.logoBg);
+  setLogo(g.logo, g.logoAlt || g.name, g.logoBg, g.logoFull, g.logoPad);
   if (!g.href) setCta(null);
   else setCta(g.href, g.name ? `Open ${g.name}` : "Enter");
 }
@@ -996,28 +1005,16 @@ function syncPanel(instant = false) {
   panelSwapTimer = setTimeout(() => commitPanelSwap(gen), alreadyHidden ? 0 : PANEL_SWAP_MS);
 }
 
-function pulseLocked() {
-  syncBox.classList.remove("deny");
-  void syncBox.offsetWidth;
-  syncBox.classList.add("deny");
-  hintEl.classList.remove("deny");
-  void hintEl.offsetWidth;
-  hintEl.classList.add("deny");
-}
-
 function activateCta() {
   const g = currentGene();
-  if (g.locked) {
-    pulseLocked();
-    return;
-  }
+  if (g.locked) return;
   const nucs = geneNucs(g);
   const href = nucs ? nucs[nucIndex]?.href : g.href;
   if (!href) return;
   window.open(href, href.startsWith("http") ? "_blank" : "_self");
 }
 
-function setNuc(i, instant = false) {
+function setNuc(i) {
   const nucs = geneNucs();
   if (!nucs?.length) return;
   const next = Math.max(0, Math.min(nucs.length - 1, i));
@@ -1029,7 +1026,7 @@ function setNuc(i, instant = false) {
     nucCursor = next;
   }
   syncPanel();
-  updateHud(instant);
+  updateHud();
 }
 
 function pulseTravel() {
@@ -1049,12 +1046,8 @@ function setTarget(i) {
   nucCursor = 0;
   pulseTravel();
   syncPanel();
-  if (reduceMotion) {
-    cursor = next;
-    updateHud(true);
-  } else {
-    updateHud(false);
-  }
+  if (reduceMotion) cursor = next;
+  updateHud();
 }
 
 function stepContactOrGene(dir) {
@@ -1100,6 +1093,20 @@ function pickFromPointer(clientX, clientY) {
   return { gene: selected, dist: bestD, mode: "miss" };
 }
 
+function onWorldClick(e) {
+  if (introActive || unfold < 0.6) return;
+  const title = e.target.closest(".world-title");
+  if (!title) return;
+  const sec = title.closest(".world-sec");
+  if (!sec) return;
+  const i = worldSecs.indexOf(sec);
+  if (i < 0) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if (i === selected || Math.abs(i - selected) !== 1) return;
+  setTarget(i);
+}
+
 function onPointerMove(e) {
   if (introActive || unfold < 0.4) return;
   const pick = pickFromPointer(e.clientX, e.clientY);
@@ -1108,7 +1115,7 @@ function onPointerMove(e) {
   renderer.domElement.style.cursor = browsing ? "pointer" : "default";
 
   if (pick.mode === "nuc" && pick.gene === selected && pick.dist < 110) {
-    setNuc(pick.nuc, true);
+    setNuc(pick.nuc);
   }
 }
 
@@ -1138,12 +1145,15 @@ function onClick(e) {
   if (reduceMotion) cursor = pick.gene;
 }
 
-let wheelLock = 0;
 let wheelAccum = 0;
-const WHEEL_COOLDOWN_MS = 480;
-const WHEEL_STEP_PX = 90;
+let lastStepAt = 0;
+let gestureStepped = false;
+const MIN_REARM_MS = 45;
+const STRONG_FLICK = 28;
+const WHEEL_STEP_PX = 350;
 
 function onWheel(e) {
+  if (e.target.closest?.("#memory-panel")) return;
   e.preventDefault();
   if (introActive) {
     skipIntro();
@@ -1157,9 +1167,13 @@ function onWheel(e) {
   if (Math.abs(delta) < 0.5) return;
 
   const now = performance.now();
-  if (now < wheelLock) {
+
+  if (gestureStepped) {
+    const newSwipe =
+      Math.abs(delta) >= STRONG_FLICK && now - lastStepAt >= MIN_REARM_MS;
+    if (!newSwipe) return;
+    gestureStepped = false;
     wheelAccum = 0;
-    return;
   }
 
   if (wheelAccum !== 0 && Math.sign(delta) !== Math.sign(wheelAccum)) {
@@ -1169,8 +1183,9 @@ function onWheel(e) {
   if (Math.abs(wheelAccum) < WHEEL_STEP_PX) return;
 
   const dir = wheelAccum > 0 ? 1 : -1;
+  lastStepAt = now;
+  gestureStepped = true;
   wheelAccum = 0;
-  wheelLock = now + WHEEL_COOLDOWN_MS;
   stepContactOrGene(dir);
 }
 
@@ -1320,7 +1335,8 @@ syncThemeButton();
 renderer.domElement.addEventListener("pointermove", onPointerMove);
 renderer.domElement.addEventListener("pointerleave", onPointerLeave);
 renderer.domElement.addEventListener("click", onClick);
-renderer.domElement.addEventListener("wheel", onWheel, { passive: false });
+worldTrack?.addEventListener("click", onWorldClick);
+document.addEventListener("wheel", onWheel, { passive: false });
 document.addEventListener("keydown", onKey);
 addEventListener("resize", resize);
 
@@ -1334,7 +1350,7 @@ buildWorldPage();
 resize();
 ensureHexes();
 rebuildCurve(0.08);
-updateHud(true);
+updateHud();
 measureWorldTravel();
 worldY = geneScrollY(selected);
 applyWorldScroll();
