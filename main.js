@@ -217,6 +217,7 @@ const syncLabel = document.getElementById("sync-label");
 const syncVal = document.getElementById("sync-val");
 const syncBox = document.getElementById("sync-box");
 const panel = document.getElementById("memory-panel");
+const panelInner = document.getElementById("panel-inner");
 const panelTitle = document.getElementById("panel-title");
 const panelBody = document.getElementById("panel-body");
 const panelFacts = document.getElementById("panel-facts");
@@ -225,6 +226,11 @@ const panelKicker = document.getElementById("panel-kicker");
 const panelLogo = document.getElementById("panel-logo");
 const panelLogoImg = document.getElementById("panel-logo-img");
 const PANEL_REST = { rx: 5, ry: -8, tz: 6 };
+let panelSwapTimer = 0;
+let panelHeightTimer = 0;
+let panelSwapGen = 0;
+const PANEL_SWAP_MS = 160;
+const PANEL_HEIGHT_MS = 340;
 let panelRx = PANEL_REST.rx;
 let panelRy = PANEL_REST.ry;
 let panelTz = PANEL_REST.tz;
@@ -728,11 +734,11 @@ function stepWorld(dt) {
 
 function fillFacts(g) {
   if (!g.facts?.length) {
-    panelFacts.hidden = true;
+    panelFacts.classList.add("is-collapsed");
     panelFacts.innerHTML = "";
     return;
   }
-  panelFacts.hidden = false;
+  panelFacts.classList.remove("is-collapsed");
   panelFacts.innerHTML = g.facts
     .map(([dt, dd]) => `<div><dt>${dt}</dt><dd>${dd}</dd></div>`)
     .join("");
@@ -740,11 +746,11 @@ function fillFacts(g) {
 
 function setCta(href, label = "Enter") {
   if (!href) {
-    panelCta.hidden = true;
+    panelCta.classList.add("is-collapsed");
     panelCta.removeAttribute("href");
     return;
   }
-  panelCta.hidden = false;
+  panelCta.classList.remove("is-collapsed");
   panelCta.href = href;
   panelCta.target = href.startsWith("http") ? "_blank" : "_self";
   panelCta.rel = href.startsWith("http") ? "noopener noreferrer" : "";
@@ -753,13 +759,13 @@ function setCta(href, label = "Enter") {
 
 function setLogo(logo, alt, bg) {
   if (!logo) {
-    panelLogo.hidden = true;
+    panelLogo.classList.add("is-collapsed");
     panelLogoImg.removeAttribute("src");
     panelLogoImg.alt = "";
     panelLogo.classList.remove("is-light");
     return;
   }
-  panelLogo.hidden = false;
+  panelLogo.classList.remove("is-collapsed");
   panelLogoImg.src = logo;
   panelLogoImg.alt = alt || "";
   panelLogo.classList.toggle("is-light", bg === "light" || bg === "white");
@@ -808,7 +814,7 @@ function updateHud(instant) {
   }
 }
 
-function syncPanel() {
+function applyPanelContent() {
   const g = currentGene();
   const nucs = geneNucs(g);
   panel.classList.toggle("is-locked", !!g.locked);
@@ -818,7 +824,7 @@ function syncPanel() {
     panelKicker.textContent = "Contact";
     panelTitle.textContent = nuc.name;
     panelBody.textContent = nuc.blurb;
-    panelFacts.hidden = true;
+    panelFacts.classList.add("is-collapsed");
     panelFacts.innerHTML = "";
     setLogo(nuc.logo, nuc.logoAlt || nuc.name, nuc.logoBg);
     setCta(nuc.href, ctaLabelFor(nuc));
@@ -842,6 +848,73 @@ function syncPanel() {
   setLogo(g.logo, g.logoAlt || g.name, g.logoBg);
   if (!g.href) setCta(null);
   else setCta(g.href, g.name ? `Open ${g.name}` : "Enter");
+}
+
+function resetPanelTransition() {
+  panelSwapGen++;
+  clearTimeout(panelSwapTimer);
+  clearTimeout(panelHeightTimer);
+  panel.classList.remove("is-swapping");
+  panel.style.height = "";
+  delete panel.dataset.swapStartH;
+}
+
+function panelContentHeight() {
+  if (!panel || !panelInner) return panel?.offsetHeight || 0;
+  const cs = getComputedStyle(panel);
+  const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+  const borderY = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+  return Math.ceil(panelInner.scrollHeight + padY + borderY);
+}
+
+function commitPanelSwap(gen) {
+  if (gen !== panelSwapGen || !panel) return;
+
+  applyPanelContent();
+
+  const startH = Number(panel.dataset.swapStartH) || panel.offsetHeight;
+  const endH = panelContentHeight();
+
+  if (Math.abs(endH - startH) < 2) {
+    panel.style.height = "";
+    delete panel.dataset.swapStartH;
+    panel.classList.remove("is-swapping");
+    return;
+  }
+
+  void panel.offsetHeight;
+  panel.style.height = `${endH}px`;
+  panel.classList.remove("is-swapping");
+
+  panelHeightTimer = setTimeout(() => {
+    if (gen !== panelSwapGen) return;
+    panel.style.height = "";
+    delete panel.dataset.swapStartH;
+  }, PANEL_HEIGHT_MS);
+}
+
+function syncPanel(instant = false) {
+  if (!panel) return;
+
+  if (instant || reduceMotion) {
+    resetPanelTransition();
+    applyPanelContent();
+    return;
+  }
+
+  const alreadyHidden = panel.classList.contains("is-swapping");
+  if (!alreadyHidden || !panel.dataset.swapStartH) {
+    panel.dataset.swapStartH = String(panel.getBoundingClientRect().height);
+    panel.style.height = `${panel.dataset.swapStartH}px`;
+    panel.classList.add("is-swapping");
+  }
+
+  panelSwapGen++;
+  const gen = panelSwapGen;
+  clearTimeout(panelSwapTimer);
+  clearTimeout(panelHeightTimer);
+
+  panelSwapTimer = setTimeout(() => commitPanelSwap(gen), alreadyHidden ? 0 : PANEL_SWAP_MS);
 }
 
 function pulseLocked() {
@@ -1186,7 +1259,7 @@ updateHud(true);
 measureWorldTravel();
 worldY = geneScrollY(selected);
 applyWorldScroll();
-syncPanel();
+syncPanel(true);
 document.body.classList.add("memory-open");
 
 function setIntroPct(p) {
