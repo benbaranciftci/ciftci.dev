@@ -101,6 +101,30 @@ body.dna-body {
   pointer-events: none;
 }
 
+.world-viewport {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  mask-image: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.3) 14%,
+    #000 28%,
+    #000 72%,
+    rgba(0, 0, 0, 0.3) 86%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.3) 14%,
+    #000 28%,
+    #000 72%,
+    rgba(0, 0, 0, 0.3) 86%,
+    transparent 100%
+  );
+}
+
 .world-track {
   position: absolute;
   left: 0;
@@ -123,9 +147,13 @@ body.dna-body {
   gap: 0.75rem;
   max-width: min(28rem, 46vw);
   opacity: 0.55;
-  transition: opacity 0.35s ease;
+  transform-origin: left center;
   mask-image: linear-gradient(90deg, #000 0%, #000 62%, transparent 100%);
   -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 62%, transparent 100%);
+}
+
+.world-sec.is-active {
+  opacity: 1;
 }
 
 .world-kicker {
@@ -151,14 +179,27 @@ body.dna-body {
   color: var(--mute);
 }
 
-.world-blurb {
-  margin-top: 0.55rem;
+.world-sync {
+  margin-top: 0.2rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.world-sync.is-locked {
+  color: var(--mute);
+}
+
+.world-detail {
+  margin-top: 0.45rem;
   max-width: 22rem;
-  font-size: clamp(0.88rem, 1.6vw, 1.02rem);
+  font-size: clamp(0.92rem, 1.65vw, 1.05rem);
   font-weight: 400;
   letter-spacing: 0;
-  line-height: 1.45;
-  color: var(--blurb);
+  line-height: 1.4;
+  color: var(--mute);
 }
 
 .world-rule {
@@ -166,6 +207,66 @@ body.dna-body {
   height: 1px;
   margin-top: 1rem;
   background: var(--rule);
+}
+
+.world-row {
+  position: relative;
+}
+
+.world-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.world-sec--contact .world-kicker,
+.world-sec--contact .world-title,
+.world-sec--contact .world-year,
+.world-sec--contact .world-sync,
+.world-sec--contact .world-detail,
+.world-sec--contact .world-rule {
+  margin-top: 0;
+}
+
+.world-sec--contact .world-sync {
+  margin-top: 0.2rem;
+}
+
+.world-sec--contact .world-detail {
+  margin-top: 0.45rem;
+}
+
+.world-sec--contact .world-rule {
+  margin-top: 1rem;
+}
+
+.world-dots {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 0.75rem);
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.world-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 0;
+  background: var(--line-soft);
+  transition:
+    background 0.28s ease,
+    opacity 0.28s ease,
+    transform 0.28s ease;
+  opacity: 0.45;
+}
+
+.world-dot.is-active {
+  background: var(--accent);
+  opacity: 1;
+  transform: scale(1.15);
 }
 
 .skip-link {

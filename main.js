@@ -321,6 +321,8 @@ let openBuilt = -1;
 let layoutFocus = 0;
 let worldY = 0;
 let worldTravelPx = 0;
+let worldSecHeight = 0;
+let worldStepPx = 0;
 let lastTickMs = 0;
 let secHeightPx = 0;
 let worldSecs = [];
@@ -671,44 +673,118 @@ function addDecor() {
   }
 }
 
+function geneWorldDetail(g) {
+  if (g.facts?.length) return g.facts[0][1];
+  if (g.locked) return "Selected work · coming soon";
+  if (g.href) {
+    try {
+      return new URL(g.href).hostname.replace(/^www\./, "");
+    } catch {
+      return g.href;
+    }
+  }
+  if (g.nucleotides?.length) return `${g.nucleotides.length} ways to connect`;
+  return "";
+}
+
+function worldSideMeta(g, nuc) {
+  if (nuc) {
+    const parts = nuc.blurb?.split("·").map((s) => s.trim()) || [];
+    return {
+      sync: "LINK",
+      detail: parts[1] || parts[0] || nuc.name,
+    };
+  }
+  return {
+    sync: g.locked ? "LOCKED" : g.sync || g.region || "",
+    detail: geneWorldDetail(g),
+  };
+}
+
 function buildWorldPage() {
   if (!worldTrack) return;
-  worldTrack.innerHTML = GENES.map(
-    (g) => `<section class="world-sec">
-      <p class="world-kicker">${g.region}</p>
+  worldTrack.innerHTML = GENES.map((g) => {
+    const { sync, detail } = worldSideMeta(g);
+    const copy = `<p class="world-kicker">${g.region}</p>
       <h2 class="world-title">${g.name}</h2>
       <p class="world-year">${g.year}</p>
-      <p class="world-blurb">${g.blurb || ""}</p>
-      <div class="world-rule" aria-hidden="true"></div>
-    </section>`
-  ).join("");
+      <p class="world-sync${g.locked ? " is-locked" : ""}">${sync}</p>
+      <p class="world-detail">${detail}</p>
+      <div class="world-rule" aria-hidden="true"></div>`;
+    if (g.nucleotides?.length) {
+      const dots = `<div class="world-dots" role="tablist" aria-label="Contact links">${g.nucleotides
+        .map(
+          (n) =>
+            `<span class="world-dot" role="tab" aria-label="${n.name}" aria-selected="false"></span>`
+        )
+        .join("")}</div>`;
+      return `<section class="world-sec world-sec--contact">
+      <div class="world-row">
+        ${dots}
+        <div class="world-copy">${copy}</div>
+      </div>
+    </section>`;
+    }
+    return `<section class="world-sec">${copy}</section>`;
+  }).join("");
   worldSecs = [...worldTrack.querySelectorAll(".world-sec")];
 }
 
 function geneScrollY(geneIdx, nucIdx = 0) {
-  const span = Math.max(1, GENES.length - 1);
-  let p = geneIdx / span;
+  let idx = geneIdx;
   const g = GENES[Math.round(THREE.MathUtils.clamp(geneIdx, 0, GENES.length - 1))];
   const nucs = g?.nucleotides;
   if (nucs?.length > 1) {
-    p += (nucIdx / Math.max(1, nucs.length - 1)) * (0.12 / span);
+    idx += (nucIdx / Math.max(1, nucs.length - 1)) * 0.1;
   }
-  return THREE.MathUtils.clamp(p, 0, 1) * worldTravelPx;
+  return idx * worldStepPx;
 }
 
 function measureWorldTravel() {
-  if (!worldEl || !worldTrack) return;
+  if (!worldEl || !worldTrack || !worldSecs.length) return;
   const h = Math.max(1, worldEl.clientHeight);
-  secHeightPx = h;
-  worldSecs.forEach((el) => {
+  worldSecHeight = h;
+  worldStepPx = Math.max(112, Math.round(h * 0.36));
+  worldTrack.style.paddingTop = "0";
+  worldTrack.style.paddingBottom = "0";
+  worldSecs.forEach((el, i) => {
     el.style.height = `${h}px`;
+    el.style.marginTop = i === 0 ? "0" : `${worldStepPx - h}px`;
   });
-  worldTravelPx = Math.max(0, (GENES.length - 1) * h);
+  secHeightPx = h;
+  worldTravelPx = Math.max(0, (GENES.length - 1) * worldStepPx);
 }
 
 function applyWorldScroll() {
   if (!worldTrack) return;
   worldTrack.style.transform = `translate3d(0, ${(-worldY).toFixed(2)}px, 0)`;
+}
+
+function applyWorldDots() {
+  const g = currentGene();
+  const nucs = geneNucs(g);
+  const sec = worldSecs[selected];
+  if (!sec) return;
+  const dots = sec.querySelectorAll(".world-dot");
+  if (!dots.length) return;
+  const idx = nucs && Math.abs(cursor - selected) < 0.45 ? Math.round(nucCursor) : -1;
+  dots.forEach((dot, i) => {
+    const on = idx >= 0 && i === idx;
+    dot.classList.toggle("is-active", on);
+    dot.setAttribute("aria-selected", on ? "true" : "false");
+  });
+}
+
+function applyWorldOpacity() {
+  worldSecs.forEach((el, i) => {
+    const d = Math.abs(cursor - i);
+    const focus = Math.max(0, 1 - d * 0.58);
+    const opacity = 0.3 + focus * 0.7;
+    const scale = 0.94 + focus * 0.06;
+    el.style.opacity = String(opacity);
+    el.style.transform = `scale(${scale.toFixed(3)})`;
+    el.classList.toggle("is-active", d < 0.22);
+  });
 }
 
 function stepWorld(dt) {
@@ -724,12 +800,8 @@ function stepWorld(dt) {
     if (Math.abs(target - worldY) < 0.15) worldY = target;
   }
   applyWorldScroll();
-
-  worldSecs.forEach((el, i) => {
-    const d = Math.abs(cursor - i);
-    const near = Math.max(0, 1 - d);
-    el.style.opacity = String(0.42 + near * 0.58);
-  });
+  applyWorldOpacity();
+  applyWorldDots();
 }
 
 function fillFacts(g) {
@@ -808,10 +880,17 @@ function updateHud(instant) {
   const sec = worldSecs[selected];
   if (sec) {
     const title = sec.querySelector(".world-title");
-    const blurb = sec.querySelector(".world-blurb");
+    const sync = sec.querySelector(".world-sync");
+    const detail = sec.querySelector(".world-detail");
+    const meta = worldSideMeta(g, nuc);
     if (title) title.textContent = nuc ? nuc.name : g.name;
-    if (blurb) blurb.textContent = nuc ? nuc.blurb : g.blurb || "";
+    if (sync) {
+      sync.textContent = meta.sync;
+      sync.classList.toggle("is-locked", !!g.locked && !nuc);
+    }
+    if (detail) detail.textContent = meta.detail;
   }
+  applyWorldDots();
 }
 
 function applyPanelContent() {
@@ -1259,6 +1338,8 @@ updateHud(true);
 measureWorldTravel();
 worldY = geneScrollY(selected);
 applyWorldScroll();
+applyWorldOpacity();
+applyWorldDots();
 syncPanel(true);
 document.body.classList.add("memory-open");
 
