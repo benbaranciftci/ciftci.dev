@@ -1,0 +1,237 @@
+.bar-label {
+  display: inline;
+}
+
+.bar-rail {
+  display: none;
+}
+
+.bar-btn-text {
+  display: inline;
+}
+
+.hud {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  transition: opacity 0.7s ease;
+}
+
+.hint {
+  position: absolute;
+  left: clamp(1.25rem, 4vw, 2.75rem);
+  bottom: calc(var(--bar-reserve) + 1rem);
+  max-width: 18rem;
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.4;
+  text-transform: none;
+  color: var(--accent);
+}
+
+.hint.locked {
+  color: var(--mute);
+}
+
+.hud-brand {
+  position: absolute;
+  z-index: 5;
+  top: clamp(1.25rem, 4vh, 2.5rem);
+  left: clamp(1.25rem, 4vw, 2.75rem);
+  margin: 0;
+  font-size: clamp(1.2rem, 2.6vw, 1.5rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--ink);
+  text-transform: none;
+  pointer-events: none;
+}
+
+.hud-brand::after {
+  content: "";
+  display: block;
+  width: 2.4rem;
+  height: 2px;
+  margin-top: 0.3rem;
+  background: linear-gradient(90deg, var(--accent), transparent);
+  opacity: 0.7;
+}
+
+.hud-sync {
+  position: absolute;
+  z-index: 5;
+  top: clamp(1.25rem, 4vh, 2.5rem);
+  right: clamp(1.25rem, 4vw, 2.75rem);
+  left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3rem;
+  pointer-events: none;
+  text-align: right;
+}
+
+.hud-sync::after {
+  content: "";
+  display: block;
+  width: 2.4rem;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent));
+  opacity: 0.7;
+}
+
+.hud-sync.is-contact::after {
+  width: 3.25rem;
+}
+
+.hud-sync.is-locked .sync-top,
+.hud-sync.is-locked .sync-now {
+  color: var(--mute);
+}
+
+.hud-sync.is-locked .sync-total,
+.hud-sync.is-locked .sync-sep {
+  opacity: 0.45;
+}
+
+.hud-sync.is-locked::after {
+  background: linear-gradient(90deg, transparent, var(--mute));
+  opacity: 0.35;
+}
+
+.sync-top {
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.sync-bot {
+  margin: 0;
+  font-size: clamp(1.2rem, 2.6vw, 1.5rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.sync-now {
+  color: var(--ink);
+}
+
+.sync-sep {
+  color: var(--mute);
+  font-weight: 400;
+  opacity: 0.45;
+  margin: 0 0.1em;
+}
+
+.sync-total {
+  color: var(--mute);
+  font-weight: 500;
+  font-size: 0.78em;
+}
+
+.bar {
+  position: fixed;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 clamp(1rem, 3vw, 2rem);
+  background: var(--bar-bg);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--bar-border);
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--mute);
+  pointer-events: auto;
+  transition: opacity 0.7s ease;
+}
+
+.bar-left,
+.bar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.bar-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--mute);
+  cursor: pointer;
+  padding: 0.25rem 0.15rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bar-btn:hover {
+  color: var(--accent);
+}
+
+.duo {
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+  position: relative;
+}
+
+.duo::before,
+.duo::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  transform: rotate(45deg);
+}
+
+.duo::before {
+  left: 0;
+  top: 3px;
+  background: var(--accent);
+}
+
+.duo::after {
+  right: 0;
+  top: 3px;
+  background: var(--duo-fill);
+  border: 1px solid var(--duo-border);
+}
+
+.bar kbd {
+  display: inline-block;
+  min-width: 1.3rem;
+  padding: 0.08rem 0.3rem;
+  margin-right: 0.3rem;
+  font: inherit;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-align: center;
+  color: #fff;
+  background: var(--accent);
+  border: 0;
+  border-radius: 2px;
+}

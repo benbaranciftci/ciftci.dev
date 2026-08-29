@@ -1,0 +1,71 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+}
+
+body.dna-body {
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--page-bg);
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.skip-link {
+  position: absolute;
+  z-index: 40;
+  top: 8px;
+  left: 8px;
+  padding: 8px 12px;
+  background: var(--ink);
+  color: #fff;
+  text-decoration: none;
+  transform: translateY(-140%);
+}
+
+.skip-link:focus {
+  transform: none;
+}
+
+html.reduce-motion body.is-intro .hud,
+html.reduce-motion body.is-intro .bar,
+html.reduce-motion body.is-intro #world,
+html.reduce-motion body.is-intro .memory-panel {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+html.reduce-motion .intro {
+  display: none !important;
+}
+
+#strand {
+  position: fixed;
+  inset: 0 0 var(--bar-reserve) 0;
+  z-index: 1;
+  width: 100%;
+  height: auto;
+  cursor: default;
+  touch-action: none;
+  opacity: 1;
+  pointer-events: auto;
+  background: var(--strand-bg);
+}
+
+#strand canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

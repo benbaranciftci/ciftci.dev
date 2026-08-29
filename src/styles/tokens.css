@@ -1,0 +1,62 @@
+:root {
+  --bg: #e6e2eb;
+  --bg-mid: #fff;
+  --ink: #2a2433;
+  --mute: #6a6276;
+  --accent: #7113d7;
+  --accent-hot: #9b4aef;
+  --page-bg: linear-gradient(165deg, #f2eef7 0%, #e6e2eb 50%, #d9d2e4 100%);
+  --strand-bg:
+    radial-gradient(ellipse 90% 55% at 12% -10%, rgba(113, 19, 215, 0.14), transparent 55%),
+    radial-gradient(ellipse 70% 45% at 92% 8%, rgba(103, 47, 163, 0.1), transparent 50%),
+    linear-gradient(180deg, #f2eef7 0%, #ebe6f3 42%, #f2eef7 100%);
+  --blurb: rgba(42, 36, 51, 0.72);
+  --rule: rgba(80, 60, 110, 0.22);
+  --sync-glow: rgba(113, 19, 215, 0.35);
+  --panel-bg: rgba(255, 255, 255, 0.72);
+  --panel-border: rgba(255, 255, 255, 0.85);
+  --panel-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.65) inset,
+    0 18px 50px rgba(60, 30, 100, 0.14),
+    0 6px 18px rgba(60, 30, 100, 0.08);
+  --line-soft: rgba(80, 60, 110, 0.12);
+  --line-logo: rgba(80, 60, 110, 0.18);
+  --bar-bg: rgba(255, 255, 255, 0.55);
+  --bar-border: rgba(255, 255, 255, 0.7);
+  --duo-fill: #fff;
+  --duo-border: rgba(80, 60, 110, 0.25);
+  --grain-opacity: 0.045;
+  --font: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --bar-reserve: 48px;
+  --panel-reserve: 0px;
+}
+
+html[data-theme="dark"] {
+  --bg: #1c1922;
+  --bg-mid: #25212e;
+  --ink: #ebe6f3;
+  --mute: #9a90ab;
+  --accent: #8b4de8;
+  --accent-hot: #b07aff;
+  --page-bg: #2a2730;
+  --strand-bg:
+    radial-gradient(ellipse 90% 55% at 12% -10%, rgba(113, 19, 215, 0.22), transparent 55%),
+    radial-gradient(ellipse 70% 45% at 92% 8%, rgba(103, 47, 163, 0.16), transparent 50%),
+    linear-gradient(180deg, #2a2730 0%, #302d33 40%, #2a2730 100%);
+  --blurb: rgba(232, 224, 242, 0.78);
+  --rule: rgba(240, 234, 246, 0.22);
+  --sync-glow: rgba(139, 77, 232, 0.28);
+  --panel-bg: rgba(28, 24, 36, 0.78);
+  --panel-border: rgba(235, 230, 243, 0.1);
+  --panel-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 22px 56px rgba(0, 0, 0, 0.4),
+    0 8px 20px rgba(0, 0, 0, 0.22);
+  --line-soft: rgba(235, 230, 243, 0.1);
+  --line-logo: rgba(235, 230, 243, 0.12);
+  --bar-bg: rgba(18, 15, 24, 0.72);
+  --bar-border: rgba(235, 230, 243, 0.08);
+  --duo-fill: #25212e;
+  --duo-border: rgba(235, 230, 243, 0.2);
+  --grain-opacity: 0.035;
+}

@@ -1,0 +1,40 @@
+@media (prefers-reduced-motion: reduce) {
+  .memory-panel {
+    transition: opacity 0.2s ease;
+  }
+
+  html:not(.is-mobile) .memory-panel {
+    transform: translateY(-50%);
+  }
+
+  .panel-inner,
+  .panel-slot {
+    transition: none;
+  }
+
+  .memory-panel.is-swapping .panel-inner {
+    opacity: 0;
+  }
+
+  .panel-logo,
+  .panel-kicker,
+  .panel-title,
+  .panel-body,
+  .panel-facts,
+  .panel-cta,
+  .panel-corner {
+    transform: none;
+  }
+
+  .world-track {
+    transition: none;
+  }
+
+  .intro-load,
+  .intro-half,
+  #world,
+  .hud,
+  .bar {
+    transition: none;
+  }
+}
