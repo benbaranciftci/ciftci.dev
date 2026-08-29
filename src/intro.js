@@ -77,6 +77,7 @@ export function createIntro({ state }) {
     state.unfoldTarget = 1;
     state.spreadTarget = 0.3;
     state.flareTarget = 0;
+    state.markDirty();
     document.body.classList.remove("is-intro");
     if (!introEl) return;
     introEl.classList.add("is-open");
@@ -100,8 +101,10 @@ export function createIntro({ state }) {
     state.unfoldTarget = 1;
     state.spreadTarget = 0.85;
     state.flareTarget = 0.25;
+    state.markDirty();
     timer = setTimeout(() => {
       state.flareTarget = 0;
+      state.markDirty();
       finish();
     }, state.reduceMotion ? 0 : 720);
   }
@@ -134,6 +137,7 @@ export function createIntro({ state }) {
     setIntroPct(0);
     state.unfoldTarget = 0.2;
     state.spreadTarget = 0.55;
+    state.markDirty();
     const onSkip = () => skip();
     introEl.addEventListener("click", onSkip);
     introEl.addEventListener(

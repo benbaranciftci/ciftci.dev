@@ -59,8 +59,10 @@ export function createInput({ state, ui, scene, intro }) {
     if (state.reduceMotion) return;
     state.flareTarget = 0.55;
     state.spreadTarget = 1;
+    state.markDirty();
     setTimeout(() => {
       state.flareTarget = 0;
+      state.markDirty();
     }, 220);
   }
 
@@ -83,6 +85,7 @@ export function createInput({ state, ui, scene, intro }) {
     else state.spreadTarget = 1;
     ui.applyPanelContent();
     ui.updateHud();
+    state.markDirty();
   }
 
   function clearContactAim() {
@@ -95,6 +98,7 @@ export function createInput({ state, ui, scene, intro }) {
     contactAimStop = clamped;
     focusInputUntil = performance.now() + FOCUS_SETTLE_MS;
     state.spreadTarget = 1;
+    state.markDirty();
   }
 
   function setFocusToStop(stopIdx) {
@@ -105,6 +109,7 @@ export function createInput({ state, ui, scene, intro }) {
     lastAppliedStop = -1;
     applySelectionFromFocus();
     state.spreadTarget = 1;
+    state.markDirty();
   }
 
   function nudgeFocus(dir) {
@@ -119,6 +124,7 @@ export function createInput({ state, ui, scene, intro }) {
     clearContactAim();
     focusInputUntil = performance.now() + FOCUS_SETTLE_MS;
     state.spreadTarget = 1;
+    state.markDirty();
   }
 
   function applyFocusDelta(delta, pxPerUnit = FOCUS_PX_PER_UNIT) {
@@ -168,7 +174,11 @@ export function createInput({ state, ui, scene, intro }) {
     if (state.introActive || state.unfold < 0.4) return;
     const pick = scene.pickFromPointer(e.clientX, e.clientY);
     browsing = pick.dist < 120 && pick.mode !== "miss";
-    state.spreadTarget = browsing || geneNucs(GENES[state.selected]) ? 1 : 0.3;
+    const nextSpread = browsing || geneNucs(GENES[state.selected]) ? 1 : 0.3;
+    if (nextSpread !== state.spreadTarget) {
+      state.spreadTarget = nextSpread;
+      state.markDirty();
+    }
     scene.renderer.domElement.style.cursor = browsing ? "pointer" : "default";
 
     if (pick.mode === "nuc" && pick.dist < 100 && performance.now() > focusInputUntil) {
@@ -178,7 +188,11 @@ export function createInput({ state, ui, scene, intro }) {
 
   function onPointerLeave() {
     browsing = false;
-    state.spreadTarget = geneNucs(GENES[state.selected]) ? 0.85 : 0.25;
+    const nextSpread = geneNucs(GENES[state.selected]) ? 0.85 : 0.25;
+    if (nextSpread !== state.spreadTarget) {
+      state.spreadTarget = nextSpread;
+      state.markDirty();
+    }
     scene.renderer.domElement.style.cursor = "default";
   }
 
@@ -315,11 +329,19 @@ export function createInput({ state, ui, scene, intro }) {
     }
   }
 
+  function isFocusBusy() {
+    if (contactAimStop !== null) return true;
+    if (performance.now() < focusInputUntil) return true;
+    if (Math.abs(state.focus - Math.round(state.focus)) > 0.0005) return true;
+    return false;
+  }
+
   function resetFocus() {
     state.focus = 0;
     syncFocusVisuals();
     lastAppliedStop = -1;
     applySelectionFromFocus();
+    state.markDirty();
   }
 
   function bind() {
@@ -356,6 +378,7 @@ export function createInput({ state, ui, scene, intro }) {
     syncFocusVisuals,
     applySelectionFromFocus,
     stepFocus,
+    isFocusBusy,
     resetFocus,
     bind,
   };

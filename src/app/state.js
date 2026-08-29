@@ -1,7 +1,7 @@
 export function createState({ reduceMotion, withIntro }) {
   const introActive = Boolean(withIntro) && !reduceMotion;
 
-  return {
+  const state = {
     reduceMotion,
     isMobileLayout: matchMedia("(max-width: 640px)").matches,
 
@@ -19,5 +19,12 @@ export function createState({ reduceMotion, withIntro }) {
     spreadTarget: introActive ? 0.55 : 0.3,
 
     introActive,
+    dirty: true,
   };
+
+  state.markDirty = () => {
+    state.dirty = true;
+  };
+
+  return state;
 }

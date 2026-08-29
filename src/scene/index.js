@@ -64,6 +64,11 @@ export function createScene({ state, theme, ui }) {
   const _x = new THREE.Vector3();
   const _y = new THREE.Vector3();
   const _z = new THREE.Vector3();
+  const _pos = new THREE.Vector3();
+  const _tan = new THREE.Vector3();
+  const _normal = new THREE.Vector3();
+  const _binormal = new THREE.Vector3();
+  const _posWork = new THREE.Vector3();
 
   let curve = null;
   let frames = null;
@@ -126,13 +131,11 @@ export function createScene({ state, theme, ui }) {
     const a = Math.floor(f);
     const b = Math.min(CURVE_SAMPLES - 1, a + 1);
     const u = f - a;
-    return {
-      pos: curve.getPointAt(t),
-      tan: curve.getTangentAt(t).normalize(),
-      normal: frames.normals[a].clone().lerp(frames.normals[b], u).normalize(),
-      binormal: frames.binormals[a].clone().lerp(frames.binormals[b], u).normalize(),
-      t,
-    };
+    curve.getPointAt(t, _pos);
+    curve.getTangentAt(t, _tan).normalize();
+    _normal.copy(frames.normals[a]).lerp(frames.normals[b], u).normalize();
+    _binormal.copy(frames.binormals[a]).lerp(frames.binormals[b], u).normalize();
+    return { pos: _pos, tan: _tan, normal: _normal, binormal: _binormal, t };
   }
 
   function orient(obj, tan, normal, binormal) {
@@ -204,7 +207,7 @@ export function createScene({ state, theme, ui }) {
     const th = tokens();
     const t = hexToT(hexIdx, focus, state.spread);
     const frame = sampleAt(t);
-    const pos = frame.pos.clone();
+    const pos = _posWork.copy(frame.pos);
     const isContent = ud.kind === "content";
     const gene = isContent ? ud.gene : -1;
     const slotIdx = isContent ? ud.slot : -1;
@@ -230,14 +233,12 @@ export function createScene({ state, theme, ui }) {
     }
 
     const gap = 1 + state.spread * Math.exp(-(nearFocus * nearFocus) / 8);
+    const hotPulse =
+      hot && !state.reduceMotion ? 1.16 + Math.sin(performance.now() * 0.004) * 0.03 : hot ? 1.16 : 1;
     const s =
       (0.95 + state.unfold * 0.55) *
       (0.88 + Math.min(2.6, gap) * 0.17) *
-      (isNuc
-        ? THREE.MathUtils.lerp(1.18, 1.45, activeAmt)
-        : hot
-          ? 1.16 + Math.sin(performance.now() * 0.004) * 0.03
-          : 1) *
+      (isNuc ? THREE.MathUtils.lerp(1.18, 1.45, activeAmt) : hotPulse) *
       (0.88 + style.fade * 0.14);
 
     mesh.position.copy(pos);
@@ -423,12 +424,24 @@ export function createScene({ state, theme, ui }) {
   }
 
   function stepCamera(now) {
-    const t = now * 0.00028;
-    const camSway = state.isMobileLayout ? 0.14 : 0.3;
     const camYBase = state.isMobileLayout ? 0.58 : 0.35;
-    const camYWave = state.isMobileLayout ? 0.05 : 0.12;
     const camZ = state.isMobileLayout ? 21.5 : 18.5;
     const lookY = state.isMobileLayout ? 0.18 : 0.05;
+
+    if (state.reduceMotion) {
+      camera.position.set(0.2, camYBase, camZ);
+      camera.lookAt(0, lookY, 0);
+      root.rotation.set(STRAND_POSE.x, STRAND_POSE.y, STRAND_POSE.z);
+      const op = 0.04 + state.unfold * 0.08;
+      deco.children.forEach((m) => {
+        m.material.opacity = op;
+      });
+      return;
+    }
+
+    const t = now * 0.00028;
+    const camSway = state.isMobileLayout ? 0.14 : 0.3;
+    const camYWave = state.isMobileLayout ? 0.05 : 0.12;
     camera.position.x = 0.2 + Math.sin(t) * camSway;
     camera.position.y = camYBase + Math.cos(t * 0.7) * camYWave;
     camera.position.z = camZ;

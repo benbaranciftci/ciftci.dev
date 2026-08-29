@@ -8,6 +8,7 @@ import { createIntro } from "../intro.js";
 
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const mobileMq = matchMedia("(max-width: 640px)");
+const SETTLE_EPS = 0.0008;
 
 const state = createState({
   reduceMotion,
@@ -50,6 +51,7 @@ function applyTheme(next) {
     contentCount: CONTENT_COUNT,
     onSyncButton: syncThemeButton,
   });
+  state.markDirty();
 }
 
 const themeBtn = document.getElementById("btn-theme");
@@ -59,25 +61,96 @@ themeBtn.addEventListener("click", () => {
 syncThemeButton();
 
 let lastTickMs = 0;
+let rafId = 0;
+let running = false;
+
+function isAnimating() {
+  if (state.introActive) return true;
+  if (Math.abs(state.unfold - state.unfoldTarget) > SETTLE_EPS) return true;
+  if (Math.abs(state.flare - state.flareTarget) > SETTLE_EPS) return true;
+  if (Math.abs(state.spread - state.spreadTarget) > SETTLE_EPS) return true;
+  if (input.isFocusBusy()) return true;
+  return false;
+}
+
+function snapLerps() {
+  if (Math.abs(state.unfold - state.unfoldTarget) <= SETTLE_EPS) state.unfold = state.unfoldTarget;
+  if (Math.abs(state.flare - state.flareTarget) <= SETTLE_EPS) state.flare = state.flareTarget;
+  if (Math.abs(state.spread - state.spreadTarget) <= SETTLE_EPS) state.spread = state.spreadTarget;
+}
 
 function tick(now) {
+  rafId = 0;
+  if (document.hidden) {
+    running = false;
+    return;
+  }
+
   const dt = lastTickMs ? Math.min(0.05, (now - lastTickMs) / 1000) : 1 / 60;
   lastTickMs = now;
 
-  state.unfold += (state.unfoldTarget - state.unfold) * (reduceMotion ? 1 : 0.05);
+  const rate = reduceMotion ? 1 : 0.05;
+  state.unfold += (state.unfoldTarget - state.unfold) * rate;
   state.flare += (state.flareTarget - state.flare) * (reduceMotion ? 1 : 0.1);
   state.spread += (state.spreadTarget - state.spread) * (reduceMotion ? 1 : 0.12);
+  snapLerps();
 
   input.stepFocus(dt);
-  scene.stepCamera(now);
-  scene.layout();
-  ui.stepWorld();
-  ui.stepPanelTilt();
-  scene.render();
 
-  intro.onFrameReady();
-  requestAnimationFrame(tick);
+  const needsFull = state.dirty || isAnimating();
+  state.dirty = false;
+
+  if (!needsFull) {
+    if (state.reduceMotion) {
+      running = false;
+      return;
+    }
+    scene.stepCamera(now);
+    scene.render();
+  } else {
+    scene.stepCamera(now);
+    scene.layout();
+    ui.stepWorld();
+    ui.stepPanelTilt();
+    scene.render();
+    intro.onFrameReady();
+  }
+
+  if (!document.hidden) {
+    running = true;
+    rafId = requestAnimationFrame(tick);
+  } else {
+    running = false;
+  }
 }
+
+function startLoop() {
+  if (document.hidden) return;
+  if (running) return;
+  running = true;
+  lastTickMs = 0;
+  state.dirty = true;
+  rafId = requestAnimationFrame(tick);
+}
+
+function stopLoop() {
+  running = false;
+  if (rafId) {
+    cancelAnimationFrame(rafId);
+    rafId = 0;
+  }
+}
+
+const markDirty = state.markDirty;
+state.markDirty = () => {
+  markDirty();
+  startLoop();
+};
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) stopLoop();
+  else startLoop();
+});
 
 input.bind();
 ui.bindSheetGrab();
@@ -86,12 +159,16 @@ ui.buildGeneRail();
 ui.syncMobileLayout();
 intro.bindSkipLink();
 
-addEventListener("resize", () => scene.resize());
+addEventListener("resize", () => {
+  scene.resize();
+  state.markDirty();
+});
 mobileMq.addEventListener("change", () => {
   state.isMobileLayout = mobileMq.matches;
   ui.syncMobileLayout();
   scene.resize();
   ui.updateHud();
+  state.markDirty();
 });
 
 scene.addDecor();
@@ -108,5 +185,6 @@ intro.start();
 intro.markLoaded("scene");
 requestAnimationFrame(() => {
   if (!state.introActive) state.unfoldTarget = 1;
+  state.markDirty();
 });
-requestAnimationFrame(tick);
+startLoop();

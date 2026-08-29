@@ -10,6 +10,10 @@ export function createWorld({ state }) {
   let worldSecHeight = 0;
   let worldStepPx = 0;
   let secHeightPx = 0;
+  let lastCursor = NaN;
+  let lastNucCursor = NaN;
+  let lastWorldY = NaN;
+  let lastLabelKey = "";
 
   function buildWorldPage() {
     if (!worldTrack) return;
@@ -38,6 +42,10 @@ export function createWorld({ state }) {
       return `<section class="world-sec">${copy}</section>`;
     }).join("");
     worldSecs = [...worldTrack.querySelectorAll(".world-sec")];
+    lastCursor = NaN;
+    lastNucCursor = NaN;
+    lastWorldY = NaN;
+    lastLabelKey = "";
   }
 
   function geneScrollY(geneIdx, nucIdx = 0) {
@@ -72,6 +80,8 @@ export function createWorld({ state }) {
     });
     secHeightPx = h;
     worldTravelPx = Math.max(0, (GENES.length - 1) * worldStepPx);
+    lastWorldY = NaN;
+    lastCursor = NaN;
   }
 
   function applyWorldScroll() {
@@ -119,6 +129,9 @@ export function createWorld({ state }) {
     const nuc = onContact
       ? nucs[Math.round(Math.min(Math.max(state.nucCursor, 0), nucs.length - 1))]
       : null;
+    const key = nuc ? `${gi}:${nuc.id}` : `${gi}:`;
+    if (key === lastLabelKey) return;
+    lastLabelKey = key;
     const sec = worldSecs[gi];
     if (!sec) return;
     const meta = worldSideMeta(g, nuc);
@@ -139,11 +152,22 @@ export function createWorld({ state }) {
     const nucs = GENES[focusGene]?.nucleotides;
     const onContact = nucs && Math.abs(state.cursor - focusGene) < 0.45;
     const nuc = onContact ? state.nucCursor : 0;
-    worldY = geneScrollY(state.cursor, nuc);
-    applyWorldScroll();
-    applyWorldOpacity();
-    applyWorldDots();
-    updateWorldLabels();
+    const nextY = geneScrollY(state.cursor, nuc);
+    const cursorChanged = state.cursor !== lastCursor || state.nucCursor !== lastNucCursor;
+
+    if (cursorChanged || Math.abs(nextY - lastWorldY) > 0.05) {
+      worldY = nextY;
+      applyWorldScroll();
+      lastWorldY = nextY;
+    }
+
+    if (cursorChanged) {
+      lastCursor = state.cursor;
+      lastNucCursor = state.nucCursor;
+      applyWorldOpacity();
+      applyWorldDots();
+      updateWorldLabels();
+    }
   }
 
   return {
