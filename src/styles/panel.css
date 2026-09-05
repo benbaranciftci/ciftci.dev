@@ -7,33 +7,29 @@
 }
 
 .memory-panel {
-  --rx: 5deg;
-  --ry: -8deg;
-  --tz: 6px;
   position: fixed;
   z-index: 4;
   right: clamp(1rem, 4vw, 2.5rem);
   top: 50%;
   width: min(24rem, calc(100vw - 2rem));
-  padding: 1.6rem 1.75rem 1.75rem;
+  padding: 0 0 1.75rem;
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
   backdrop-filter: blur(16px);
   box-shadow: var(--panel-shadow);
-  transform: translateY(-50%) perspective(920px) rotateX(var(--rx)) rotateY(var(--ry))
-    translateZ(var(--tz));
-  transform-style: preserve-3d;
+  transform: translateY(-50%);
   opacity: 1;
   pointer-events: auto;
-  transform-origin: center center;
+  overflow: hidden;
   transition:
     opacity 0.36s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 0.25s ease,
     height 0.34s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform, height;
+  will-change: height;
 }
 
 .panel-inner {
+  padding: 1.6rem 1.75rem 0;
   transition: opacity 0.26s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -62,6 +58,10 @@
   color: var(--mute);
 }
 
+.memory-panel.is-locked .panel-kicker::before {
+  background: var(--mute);
+}
+
 .memory-panel.is-locked .panel-title {
   color: var(--mute);
 }
@@ -72,7 +72,6 @@
   height: 11px;
   pointer-events: none;
   z-index: 3;
-  transform: translateZ(28px);
 }
 
 .panel-corner-tl {
@@ -108,35 +107,35 @@
 }
 
 .panel-logo {
-  margin: 0 0 1.15rem;
-  max-height: 3.6rem;
-  height: 3.6rem;
+  margin: -1.6rem -1.75rem 1.35rem;
+  max-height: 9.25rem;
+  height: 9.25rem;
   padding: 0;
-  background: #000;
-  border: 1px solid var(--line-logo);
+  background: var(--logo-plate);
+  border: 0;
+  border-bottom: 1px solid var(--line-logo);
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  transform: translateZ(18px);
   opacity: 1;
 }
 
 .panel-logo.is-collapsed {
   max-height: 0;
   height: 0;
-  margin-bottom: 0;
+  margin: 0;
   opacity: 0;
   border-color: transparent;
 }
 
 .panel-logo.is-light {
-  background: #fff;
+  background: var(--logo-plate-light);
 }
 
 .panel-logo img {
   display: block;
-  width: 80%;
+  width: 100%;
   height: 100%;
   object-fit: contain;
   object-position: center;
@@ -144,12 +143,15 @@
 
 .panel-logo.is-full img {
   width: 100%;
+  height: 100%;
   object-fit: cover;
+  object-position: center 28%;
 }
 
 .panel-logo.is-padded img {
-  width: 68%;
-  height: 68%;
+  width: auto;
+  height: 54%;
+  max-width: 48%;
   object-fit: contain;
 }
 
@@ -183,32 +185,40 @@
   max-height: 3.5rem;
 }
 
+.panel-title {
+  font-size: clamp(1.65rem, 3.4vw, 2.1rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  text-transform: none;
+  margin-bottom: 0.85rem;
+}
+
 .panel-kicker {
+  font-family: var(--font-mono);
   font-size: 0.7rem;
   font-weight: 500;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--track-kicker);
   text-transform: uppercase;
   color: var(--accent);
   margin-bottom: 0.4rem;
-  transform: translateZ(14px);
 }
 
-.panel-title {
-  font-size: clamp(1.5rem, 3.2vw, 1.9rem);
-  font-weight: 700;
-  letter-spacing: -0.015em;
-  line-height: 1.15;
-  text-transform: none;
-  margin-bottom: 0.85rem;
-  transform: translateZ(22px);
+.panel-kicker::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 0.45rem;
+  background: var(--accent);
+  transform: rotate(45deg) translateY(-1px);
 }
 
 .panel-body {
   font-size: 1rem;
   line-height: 1.55;
-  color: var(--mute);
+  color: var(--blurb);
   margin-bottom: 1.25rem;
-  transform: translateZ(12px);
 }
 
 .panel-facts {
@@ -218,7 +228,6 @@
   margin: 0 0 1.25rem;
   padding: 0.9rem 0 0;
   border-top: 1px solid var(--line-soft);
-  transform: translateZ(10px);
 }
 
 .panel-facts div {
@@ -229,9 +238,10 @@
 }
 
 .panel-facts dt {
+  font-family: var(--font-mono);
   font-size: 0.7rem;
   font-weight: 500;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--track-kicker);
   text-transform: none;
   color: var(--mute);
 }
@@ -243,18 +253,19 @@
 
 .panel-cta {
   display: inline-block;
+  font-family: var(--font-mono);
   font-size: 0.82rem;
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
   text-decoration: none;
   color: #fff;
-  background: var(--accent);
-  padding: 0.72rem 1.2rem;
+  background: var(--accent-fill);
+  padding: 0.8rem 1.35rem;
   clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%);
-  transform: translateZ(26px);
+  box-shadow: 0 10px 28px rgba(113, 19, 215, 0.38);
 }
 
 .panel-cta:hover {
-  background: var(--accent-hot);
+  background: var(--accent-fill-hot);
 }

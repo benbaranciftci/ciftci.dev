@@ -114,7 +114,6 @@ export const GENES = [
         logo: "assets/linkedin-logo-full.svg",
         logoAlt: "LinkedIn",
         logoBg: "light",
-        logoPad: true,
       },
       {
         id: "email",

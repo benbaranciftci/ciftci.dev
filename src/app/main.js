@@ -111,7 +111,6 @@ function tick(now) {
     scene.stepCamera(now);
     scene.layout();
     ui.stepWorld();
-    ui.stepPanelTilt();
     scene.render();
     intro.onFrameReady();
   }
@@ -154,7 +153,6 @@ document.addEventListener("visibilitychange", () => {
 
 input.bind();
 ui.bindSheetGrab();
-ui.bindPanelTilt();
 ui.buildGeneRail();
 ui.syncMobileLayout();
 intro.bindSkipLink();

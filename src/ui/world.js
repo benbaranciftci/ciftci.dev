@@ -1,4 +1,4 @@
-import { GENES, worldSideMeta } from "../content/model.js";
+import { GENES } from "../content/model.js";
 
 export function createWorld({ state }) {
   const worldEl = document.getElementById("world");
@@ -18,13 +18,8 @@ export function createWorld({ state }) {
   function buildWorldPage() {
     if (!worldTrack) return;
     worldTrack.innerHTML = GENES.map((g) => {
-      const { sync, detail } = worldSideMeta(g);
-      const copy = `<p class="world-kicker">${g.region}</p>
-      <h2 class="world-title">${g.name}</h2>
-      <p class="world-year">${g.year}</p>
-      <p class="world-sync${g.locked ? " is-locked" : ""}">${sync}</p>
-      <p class="world-detail">${detail}</p>
-      <div class="world-rule" aria-hidden="true"></div>`;
+      const copy = `<h2 class="world-title">${g.name}</h2>
+      <p class="world-year">${g.year}</p>`;
       if (g.nucleotides?.length) {
         const dots = `<div class="world-dots" role="tablist" aria-label="Contact links">${g.nucleotides
           .map(
@@ -134,16 +129,8 @@ export function createWorld({ state }) {
     lastLabelKey = key;
     const sec = worldSecs[gi];
     if (!sec) return;
-    const meta = worldSideMeta(g, nuc);
     const title = sec.querySelector(".world-title");
-    const sync = sec.querySelector(".world-sync");
-    const detail = sec.querySelector(".world-detail");
     if (title) title.textContent = nuc ? nuc.name : g.name;
-    if (sync) {
-      sync.textContent = meta.sync;
-      sync.classList.toggle("is-locked", !!g.locked && !nuc);
-    }
-    if (detail) detail.textContent = meta.detail;
   }
 
   function stepWorld() {

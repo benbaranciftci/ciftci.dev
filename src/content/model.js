@@ -47,51 +47,6 @@ export function geneCenterHex(gi) {
   return GENE_START[gi] + (geneHexCount(gi) - 1) * 0.5;
 }
 
-export function geneT(i) {
-  return (i + 0.5) / GENES.length;
-}
-
-export function geneFromT(t) {
-  let best = 0;
-  let bestD = Infinity;
-  for (let i = 0; i < GENES.length; i++) {
-    const d = Math.abs(geneT(i) - t);
-    if (d < bestD) {
-      bestD = d;
-      best = i;
-    }
-  }
-  return best;
-}
-
-export function geneWorldDetail(g) {
-  if (g.facts?.length) return g.facts[0][1];
-  if (g.locked) return "Selected work · coming soon";
-  if (g.href) {
-    try {
-      return new URL(g.href).hostname.replace(/^www\./, "");
-    } catch {
-      return g.href;
-    }
-  }
-  if (g.nucleotides?.length) return `${g.nucleotides.length} ways to connect`;
-  return "";
-}
-
-export function worldSideMeta(g, nuc) {
-  if (nuc) {
-    const parts = nuc.blurb?.split("·").map((s) => s.trim()) || [];
-    return {
-      sync: "LINK",
-      detail: parts[1] || parts[0] || nuc.name,
-    };
-  }
-  return {
-    sync: g.locked ? "LOCKED" : g.sync || g.region || "",
-    detail: geneWorldDetail(g),
-  };
-}
-
 export function geneLogoUrls() {
   return [
     ...new Set(

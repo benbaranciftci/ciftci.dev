@@ -1,5 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
-
 *,
 *::before,
 *::after {
@@ -23,8 +21,23 @@ body.dna-body {
   -webkit-font-smoothing: antialiased;
 }
 
+body.dna-body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: var(--grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
 body.dna-body:has(main.noscript) {
   overflow: auto;
+}
+
+body.dna-body:has(main.noscript)::after {
+  display: none;
 }
 
 .skip-link {
@@ -41,6 +54,15 @@ body.dna-body:has(main.noscript) {
 
 .skip-link:focus {
   transform: none;
+}
+
+.skip-link:focus-visible,
+.bar-btn:focus-visible,
+.panel-cta:focus-visible,
+.rail-dot:focus-visible,
+.panel-grab:focus-visible {
+  outline: 1.5px solid var(--accent);
+  outline-offset: 3px;
 }
 
 html.reduce-motion body.is-intro .hud,
@@ -98,7 +120,7 @@ html.reduce-motion .intro {
 .noscript h2 {
   font-size: 0.8rem;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--track-kicker);
   text-transform: uppercase;
   color: var(--accent);
   margin: 2rem 0 0.75rem;

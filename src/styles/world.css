@@ -1,22 +1,11 @@
 #world {
   position: fixed;
   inset: 0 0 var(--bar-reserve) 0;
-  z-index: 2;
+  z-index: 3;
   overflow: hidden;
   pointer-events: none;
   background: transparent;
   transition: opacity 0.7s ease;
-}
-
-#world::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  opacity: var(--grain-opacity);
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 180px 180px;
-  z-index: 1;
-  pointer-events: none;
 }
 
 .world-viewport {
@@ -62,7 +51,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 0.75rem;
+  gap: 0.4rem;
   max-width: min(28rem, 46vw);
   opacity: 0.55;
   transform-origin: left center;
@@ -83,57 +72,41 @@
   color: var(--accent);
 }
 
-.world-kicker {
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-
 .world-title {
-  font-size: clamp(2.6rem, 7.5vw, 4.6rem);
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
+  font-size: clamp(3rem, 8.2vw, 5.4rem);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 0.95;
   color: var(--ink);
 }
 
 .world-year {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--font-mono);
   font-size: 0.85rem;
   font-weight: 500;
-  letter-spacing: 0.04em;
-  color: var(--mute);
-}
-
-.world-sync {
-  margin-top: 0.2rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  letter-spacing: var(--track-kicker);
   color: var(--accent);
 }
 
-.world-sync.is-locked {
-  color: var(--mute);
+.world-year::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  background: var(--accent);
+  transform: rotate(45deg);
+  flex: 0 0 auto;
 }
 
-.world-detail {
-  margin-top: 0.45rem;
-  max-width: 22rem;
-  font-size: clamp(0.92rem, 1.65vw, 1.05rem);
-  font-weight: 400;
-  letter-spacing: 0;
-  line-height: 1.4;
-  color: var(--mute);
-}
-
-.world-rule {
-  width: min(16rem, 70%);
+.world-year::after {
+  content: "";
+  flex: 1;
+  max-width: 4.5rem;
   height: 1px;
-  margin-top: 1rem;
-  background: var(--rule);
+  background: linear-gradient(90deg, var(--accent), transparent);
+  opacity: 0.7;
 }
 
 .world-row {
@@ -143,28 +116,7 @@
 .world-copy {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-}
-
-.world-sec--contact .world-kicker,
-.world-sec--contact .world-title,
-.world-sec--contact .world-year,
-.world-sec--contact .world-sync,
-.world-sec--contact .world-detail,
-.world-sec--contact .world-rule {
-  margin-top: 0;
-}
-
-.world-sec--contact .world-sync {
-  margin-top: 0.2rem;
-}
-
-.world-sec--contact .world-detail {
-  margin-top: 0.45rem;
-}
-
-.world-sec--contact .world-rule {
-  margin-top: 1rem;
+  gap: 0.4rem;
 }
 
 .world-dots {
@@ -183,6 +135,7 @@
   height: 7px;
   border-radius: 0;
   background: var(--line-soft);
+  transform: rotate(45deg);
   transition:
     background 0.28s ease,
     opacity 0.28s ease,
@@ -193,5 +146,5 @@
 .world-dot.is-active {
   background: var(--accent);
   opacity: 1;
-  transform: scale(1.15);
+  transform: rotate(45deg) scale(1.15);
 }

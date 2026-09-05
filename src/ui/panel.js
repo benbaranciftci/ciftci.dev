@@ -14,7 +14,6 @@ export function createPanel({ state }) {
 
   const SHEET_SNAPS = ["peek", "full"];
   const SHEET_DRAG_THRESHOLD = 36;
-  const PANEL_REST = { rx: 5, ry: -8, tz: 6 };
   const PANEL_SWAP_MS = 160;
   const PANEL_HEIGHT_MS = 340;
 
@@ -24,49 +23,9 @@ export function createPanel({ state }) {
   let panelSwapTimer = 0;
   let panelHeightTimer = 0;
   let panelSwapGen = 0;
-  let panelRx = PANEL_REST.rx;
-  let panelRy = PANEL_REST.ry;
-  let panelTz = PANEL_REST.tz;
-  let panelRxT = PANEL_REST.rx;
-  let panelRyT = PANEL_REST.ry;
-  let panelTzT = PANEL_REST.tz;
-
-  const panelTiltOk = !state.reduceMotion && matchMedia("(pointer: fine)").matches;
 
   function currentGene() {
     return GENES[state.selected];
-  }
-
-  function setPanelTilt(rx, ry, tz) {
-    if (!panel) return;
-    panel.style.setProperty("--rx", `${rx.toFixed(2)}deg`);
-    panel.style.setProperty("--ry", `${ry.toFixed(2)}deg`);
-    panel.style.setProperty("--tz", `${tz.toFixed(2)}px`);
-  }
-
-  function onPanelPointerMove(e) {
-    if (!panelTiltOk || state.introActive) return;
-    const r = panel.getBoundingClientRect();
-    if (r.width < 8 || r.height < 8) return;
-    const x = ((e.clientX - r.left) / r.width) * 2 - 1;
-    const y = ((e.clientY - r.top) / r.height) * 2 - 1;
-    panelRyT = PANEL_REST.ry + x * 9;
-    panelRxT = PANEL_REST.rx - y * 7;
-    panelTzT = PANEL_REST.tz + 10;
-  }
-
-  function onPanelPointerLeave() {
-    panelRxT = PANEL_REST.rx;
-    panelRyT = PANEL_REST.ry;
-    panelTzT = PANEL_REST.tz;
-  }
-
-  function stepPanelTilt() {
-    if (!panelTiltOk) return;
-    panelRx += (panelRxT - panelRx) * 0.12;
-    panelRy += (panelRyT - panelRy) * 0.12;
-    panelTz += (panelTzT - panelTz) * 0.12;
-    setPanelTilt(panelRx, panelRy, panelTz);
   }
 
   function fillFacts(g) {
@@ -303,12 +262,6 @@ export function createPanel({ state }) {
     });
   }
 
-  function bindPanelTilt() {
-    if (!panel || !panelTiltOk) return;
-    panel.addEventListener("pointermove", onPanelPointerMove);
-    panel.addEventListener("pointerleave", onPanelPointerLeave);
-  }
-
   return {
     panel,
     get sheetSnap() {
@@ -320,8 +273,6 @@ export function createPanel({ state }) {
     applyPanelContent,
     syncPanel,
     activateCta,
-    stepPanelTilt,
     bindSheetGrab,
-    bindPanelTilt,
   };
 }

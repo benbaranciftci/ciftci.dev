@@ -32,9 +32,9 @@ export const ACCENT_THEMES = {
     decorOp: 0.12,
   },
   dark: {
-    accent: 0x8b4de8,
-    accentHot: 0xb07aff,
-    fog: 0x2a2730,
+    accent: 0xc084fc,
+    accentHot: 0xe9d5ff,
+    fog: 0x1a1620,
     fogNear: 14,
     fogFar: 42,
     ambient: 0.95,

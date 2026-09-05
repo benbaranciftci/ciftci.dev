@@ -28,9 +28,7 @@ export function createUI({ state, nav }) {
     applyPanelContent: panel.applyPanelContent,
     syncPanel: panel.syncPanel,
     activateCta: panel.activateCta,
-    stepPanelTilt: panel.stepPanelTilt,
     bindSheetGrab: panel.bindSheetGrab,
-    bindPanelTilt: panel.bindPanelTilt,
 
     worldEl: world.worldEl,
     worldTrack: world.worldTrack,
