@@ -36,11 +36,22 @@ export function geneNucs(g) {
   return g?.nucleotides || null;
 }
 
+export const CONTACT_INDEX = GENES.findIndex((g) => g.id === "contact");
+
+export function asPlateCta(text) {
+  const core = String(text || "OPEN").replace(/[▸►]/g, "").trim().toUpperCase();
+  return `${core} ▸`;
+}
+
 export function ctaLabelFor(nuc) {
-  if (!nuc) return "Enter";
-  if (nuc.cta) return nuc.cta;
-  if (nuc.href?.startsWith("mailto:")) return "Send email";
-  return nuc.name ? `Open ${nuc.name}` : "Enter";
+  if (!nuc) return asPlateCta("OPEN");
+  if (nuc.cta) return asPlateCta(nuc.cta);
+  if (nuc.href?.startsWith("mailto:")) return asPlateCta("SEND MAIL");
+  return asPlateCta(nuc.name ? `OPEN ${nuc.name}` : "OPEN");
+}
+
+export function geneCtaLabel(g) {
+  return asPlateCta(g?.name ? `OPEN ${g.name}` : "OPEN");
 }
 
 export function geneCenterHex(gi) {
@@ -52,6 +63,7 @@ export function geneLogoUrls() {
     ...new Set(
       GENES.flatMap((g) => [
         g.logo,
+        ...(g.links?.map((n) => n.logo) || []),
         ...(g.nucleotides?.map((n) => n.logo) || []),
       ]).filter(Boolean)
     ),

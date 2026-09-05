@@ -2,7 +2,7 @@ export const ACCENT_THEMES = {
   light: {
     accent: 0x7113d7,
     accentHot: 0x9b4aef,
-    fog: 0xddd6e8,
+    fog: 0xd8dbe0,
     fogNear: 13,
     fogFar: 38,
     ambient: 1.0,

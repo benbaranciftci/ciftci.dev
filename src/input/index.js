@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { GENES, SCROLL_STOPS, geneNucs } from "../content/model.js";
+import { isTypingTarget } from "../content/contact.js";
 
 const FOCUS_PX_PER_UNIT = 300;
 const FOCUS_PX_PER_UNIT_TOUCH = 220;
@@ -83,7 +84,7 @@ export function createInput({ state, ui, scene, intro }) {
     if (geneChanged && state.isMobileLayout) ui.resetSheetSnap();
     if (geneChanged) pulseTravel();
     else state.spreadTarget = 1;
-    ui.applyPanelContent();
+    ui.syncPanel();
     ui.updateHud();
     state.markDirty();
   }
@@ -219,7 +220,7 @@ export function createInput({ state, ui, scene, intro }) {
   }
 
   function onWheel(e) {
-    if (e.target.closest?.("#memory-panel")) return;
+    if (isTypingTarget(e.target) || e.target.closest?.("#memory-panel")) return;
     e.preventDefault();
     if (state.introActive) {
       intro.skip();
@@ -261,6 +262,13 @@ export function createInput({ state, ui, scene, intro }) {
   }
 
   function onKey(e) {
+    if (isTypingTarget(e.target)) {
+      if (e.key === "Escape") {
+        e.target.blur?.();
+        e.preventDefault();
+      }
+      return;
+    }
     if (state.introActive) {
       if (
         e.key === "Escape" ||
@@ -336,6 +344,12 @@ export function createInput({ state, ui, scene, intro }) {
     return false;
   }
 
+  function isUserBusy() {
+    if (browsing) return true;
+    if (touchDragY !== null) return true;
+    return isFocusBusy();
+  }
+
   function resetFocus() {
     state.focus = 0;
     syncFocusVisuals();
@@ -379,6 +393,7 @@ export function createInput({ state, ui, scene, intro }) {
     applySelectionFromFocus,
     stepFocus,
     isFocusBusy,
+    isUserBusy,
     resetFocus,
     bind,
   };

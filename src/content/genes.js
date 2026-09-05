@@ -1,3 +1,5 @@
+import { CONTACT_LINKS } from "./contact.js";
+
 export const GENES = [
   {
     id: "about",
@@ -93,39 +95,10 @@ export const GENES = [
     year: "NOW",
     name: "contact",
     sync: "OPEN",
-    blurb: "Ways to reach me — move along the strand or use →.",
-    nucleotides: [
-      {
-        id: "github",
-        name: "GitHub",
-        blurb: "GitHub · benbaranciftci",
-        href: "https://github.com/benbaranciftci",
-        cta: "Open GitHub",
-        logo: "assets/github-logo.svg",
-        logoAlt: "GitHub",
-        logoPad: true,
-      },
-      {
-        id: "linkedin",
-        name: "LinkedIn",
-        blurb: "LinkedIn · Baran Çiftçi",
-        href: "https://www.linkedin.com/in/baran-%C3%A7ift%C3%A7i-a004b9283",
-        cta: "Open LinkedIn",
-        logo: "assets/linkedin-logo-full.svg",
-        logoAlt: "LinkedIn",
-        logoBg: "light",
-      },
-      {
-        id: "email",
-        name: "Email",
-        blurb: "Email · baran@ciftci.dev",
-        href: "mailto:baran@ciftci.dev",
-        cta: "Send email",
-        logo: "assets/email-logo.svg",
-        logoAlt: "Email",
-        logoPad: true,
-      },
-    ],
+    blurb: "GitHub, LinkedIn, Instagram — or write a line.",
+    form: true,
+    hexes: 4,
+    links: CONTACT_LINKS,
   },
 ];
 

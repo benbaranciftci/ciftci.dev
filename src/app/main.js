@@ -1,4 +1,4 @@
-import { CONTENT_COUNT } from "../content/model.js";
+import { CONTENT_COUNT, geneNucs, GENES } from "../content/model.js";
 import { createState } from "./state.js";
 import { createTheme } from "../theme.js";
 import { createUI } from "../ui/index.js";
@@ -36,7 +36,7 @@ nav.selectionToFocus = (gene, nuc) => input.selectionToFocus(gene, nuc);
 function syncThemeButton() {
   const themeBtn = document.getElementById("btn-theme");
   const dark = theme.name === "dark";
-  themeBtn.textContent = dark ? "Light" : "Dark";
+  themeBtn.textContent = dark ? "Mode · Night" : "Mode · Day";
   themeBtn.setAttribute("aria-pressed", dark ? "true" : "false");
   themeBtn.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
 }
@@ -64,12 +64,15 @@ let lastTickMs = 0;
 let rafId = 0;
 let running = false;
 
+const IDLE_RATE = 0.000628;
+
 function isAnimating() {
   if (state.introActive) return true;
   if (Math.abs(state.unfold - state.unfoldTarget) > SETTLE_EPS) return true;
   if (Math.abs(state.flare - state.flareTarget) > SETTLE_EPS) return true;
   if (Math.abs(state.spread - state.spreadTarget) > SETTLE_EPS) return true;
   if (input.isFocusBusy()) return true;
+  if (!state.reduceMotion) return true;
   return false;
 }
 
@@ -92,6 +95,15 @@ function tick(now) {
   const rate = reduceMotion ? 1 : 0.05;
   state.unfold += (state.unfoldTarget - state.unfold) * rate;
   state.flare += (state.flareTarget - state.flare) * (reduceMotion ? 1 : 0.1);
+
+  if (
+    !reduceMotion &&
+    !state.introActive &&
+    !input.isUserBusy()
+  ) {
+    const rest = geneNucs(GENES[state.selected]) ? 0.85 : 0.31;
+    state.spreadTarget = rest + Math.sin(now * IDLE_RATE) * 0.03;
+  }
   state.spread += (state.spreadTarget - state.spread) * (reduceMotion ? 1 : 0.12);
   snapLerps();
 
@@ -109,7 +121,7 @@ function tick(now) {
     scene.render();
   } else {
     scene.stepCamera(now);
-    scene.layout();
+    scene.layout(now);
     ui.stepWorld();
     scene.render();
     intro.onFrameReady();

@@ -201,7 +201,9 @@ export function createScene({ state, theme, ui }) {
     }
   }
 
-  function layoutHex(entry, hexIdx, focus, style) {
+  const IDLE_RATE = 0.000628;
+
+  function layoutHex(entry, hexIdx, focus, style, now) {
     const { mesh, line } = entry;
     const ud = mesh.userData;
     const th = tokens();
@@ -222,6 +224,12 @@ export function createScene({ state, theme, ui }) {
     const hot = isContent && (gene === focusGene || isActiveNuc);
     const nearFocus = Math.abs(hexIdx - focus);
     const activeAmt = isNuc ? Math.max(0, 1 - nucDist) : 0;
+    const idle = now * IDLE_RATE;
+
+    if (!state.reduceMotion) {
+      pos.addScaledVector(frame.binormal, Math.sin(idle + hexIdx * 0.35) * 0.035);
+      pos.addScaledVector(frame.normal, Math.cos(idle * 0.7 + hexIdx * 0.2) * 0.012);
+    }
 
     if (state.flare > 0.01 && nearFocus < 2.2 && !geneNucs(GENES[state.selected])) {
       const g = 1 - nearFocus / 2.2;
@@ -233,8 +241,8 @@ export function createScene({ state, theme, ui }) {
     }
 
     const gap = 1 + state.spread * Math.exp(-(nearFocus * nearFocus) / 8);
-    const hotPulse =
-      hot && !state.reduceMotion ? 1.16 + Math.sin(performance.now() * 0.004) * 0.03 : hot ? 1.16 : 1;
+    const livePulse = !state.reduceMotion ? 0.5 + 0.5 * Math.sin(idle) : 0.5;
+    const hotPulse = hot ? 1.16 * (1 + (livePulse - 0.5) * 0.04) : 1;
     const s =
       (0.95 + state.unfold * 0.55) *
       (0.88 + Math.min(2.6, gap) * 0.17) *
@@ -259,7 +267,7 @@ export function createScene({ state, theme, ui }) {
       const isNeighbor = Math.abs(slotIdx - state.nucIndex) === 1;
       const pulse =
         isNeighbor && !state.reduceMotion
-          ? 0.5 + 0.5 * Math.sin(performance.now() * 0.005 + slotIdx)
+          ? 0.5 + 0.5 * Math.sin(now * 0.005 + slotIdx)
           : 0;
       mesh.material.color.setHex(theme.accentHot);
       mesh.material.opacity = THREE.MathUtils.lerp(0.3, 0.4, pulse);
@@ -272,9 +280,9 @@ export function createScene({ state, theme, ui }) {
       }
     } else if (hot) {
       mesh.material.color.setHex(theme.accent);
-      mesh.material.opacity = 0.5;
+      mesh.material.opacity = 0.5 * (0.96 + livePulse * 0.08);
       line.material.color.setHex(theme.accentHot);
-      line.material.opacity = 1;
+      line.material.opacity = 0.96 + livePulse * 0.04;
     } else if (isContent) {
       mesh.material.color.setHSL(th.h, th.sMesh, ud.baseL);
       mesh.material.opacity = Math.max(alpha, th.contentOp + state.unfold * th.contentOpU);
@@ -291,7 +299,7 @@ export function createScene({ state, theme, ui }) {
     line.visible = mesh.visible;
   }
 
-  function layout() {
+  function layout(now = performance.now()) {
     rebuildCurve(state.unfold);
     ensureHexes();
 
@@ -302,14 +310,14 @@ export function createScene({ state, theme, ui }) {
       const { contentIdx } = entry.mesh.userData;
       const style = hexStyle(contentIdx);
       style.fade = 1;
-      layoutHex(entry, contentIdx, focus, style);
+      layoutHex(entry, contentIdx, focus, style, now);
     });
 
     padHexes.forEach((entry) => {
       const { side, padIdx } = entry.mesh.userData;
       const hexIdx = side === "left" ? -(padIdx + 1) : CONTENT_COUNT + padIdx;
       const style = hexStyle(hexIdx);
-      layoutHex(entry, hexIdx, focus, style);
+      layoutHex(entry, hexIdx, focus, style, now);
     });
   }
 
@@ -439,16 +447,16 @@ export function createScene({ state, theme, ui }) {
       return;
     }
 
-    const t = now * 0.00028;
+    const idle = now * IDLE_RATE;
     const camSway = state.isMobileLayout ? 0.14 : 0.3;
     const camYWave = state.isMobileLayout ? 0.05 : 0.12;
-    camera.position.x = 0.2 + Math.sin(t) * camSway;
-    camera.position.y = camYBase + Math.cos(t * 0.7) * camYWave;
+    camera.position.x = 0.2 + Math.sin(idle) * camSway;
+    camera.position.y = camYBase + Math.cos(idle * 0.7) * camYWave;
     camera.position.z = camZ;
     camera.lookAt(0, lookY, 0);
-    root.rotation.x = STRAND_POSE.x;
-    root.rotation.y = STRAND_POSE.y + Math.sin(t * 0.5) * (state.isMobileLayout ? 0.03 : 0.05);
-    root.rotation.z = STRAND_POSE.z;
+    root.rotation.x = STRAND_POSE.x + Math.sin(idle * 0.4) * 0.03;
+    root.rotation.y = STRAND_POSE.y + Math.sin(idle) * (state.isMobileLayout ? 0.045 : 0.08);
+    root.rotation.z = STRAND_POSE.z + Math.cos(idle * 0.4) * 0.02;
 
     deco.children.forEach((m) => {
       m.position.y += Math.sin(now * 0.001 + m.userData.phase) * 0.001;

@@ -1,4 +1,10 @@
-import { GENES, geneNucs, ctaLabelFor } from "../content/model.js";
+import { GENES, geneNucs, ctaLabelFor, geneCtaLabel } from "../content/model.js";
+import {
+  bindContactForm,
+  contactRailHTML,
+  isContactGene,
+  isTypingTarget,
+} from "../content/contact.js";
 
 export function createPanel({ state }) {
   const panel = document.getElementById("memory-panel");
@@ -11,6 +17,13 @@ export function createPanel({ state }) {
   const panelLogo = document.getElementById("panel-logo");
   const panelLogoImg = document.getElementById("panel-logo-img");
   const panelGrab = document.getElementById("panel-grab");
+  const contactElse = document.getElementById("contact-else");
+  const contactForm = document.getElementById("contact-form");
+
+  if (contactElse && !contactElse.childElementCount) {
+    contactElse.innerHTML = contactRailHTML();
+  }
+  bindContactForm(contactForm);
 
   const SHEET_SNAPS = ["peek", "full"];
   const SHEET_DRAG_THRESHOLD = 36;
@@ -40,7 +53,7 @@ export function createPanel({ state }) {
       .join("");
   }
 
-  function setCta(href, label = "Enter") {
+  function setCta(href, label = "OPEN ▸") {
     if (!href) {
       panelCta.classList.add("is-collapsed");
       panelCta.removeAttribute("href");
@@ -124,7 +137,22 @@ export function createPanel({ state }) {
   function applyPanelContent() {
     const g = currentGene();
     const nucs = geneNucs(g);
+    const contact = isContactGene(g);
     panel.classList.toggle("is-locked", !!g.locked);
+    panel.classList.toggle("is-contact", contact);
+    contactElse?.classList.toggle("is-collapsed", !contact);
+    contactForm?.classList.toggle("is-collapsed", !contact);
+
+    if (contact) {
+      panelKicker.textContent = g.region || "Contact";
+      panelTitle.textContent = g.name;
+      panelBody.textContent = g.blurb;
+      panelFacts.classList.add("is-collapsed");
+      panelFacts.innerHTML = "";
+      setLogo(null);
+      setCta(null);
+      return;
+    }
 
     if (nucs) {
       const nuc = nucs[state.nucIndex];
@@ -154,7 +182,7 @@ export function createPanel({ state }) {
     fillFacts(g);
     setLogo(g.logo, g.logoAlt || g.name, g.logoBg, g.logoFull, g.logoPad);
     if (!g.href) setCta(null);
-    else setCta(g.href, g.name ? `Open ${g.name}` : "Enter");
+    else setCta(g.href, geneCtaLabel(g));
   }
 
   function resetPanelTransition() {
@@ -227,6 +255,12 @@ export function createPanel({ state }) {
   function activateCta() {
     const g = currentGene();
     if (g.locked) return;
+    if (isContactGene(g)) {
+      if (!isTypingTarget(document.activeElement)) {
+        document.getElementById("contact-name")?.focus();
+      }
+      return;
+    }
     const nucs = geneNucs(g);
     const href = nucs ? nucs[state.nucIndex]?.href : g.href;
     if (!href) return;

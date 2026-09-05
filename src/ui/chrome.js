@@ -1,12 +1,15 @@
-import { GENES, geneNucs } from "../content/model.js";
+import { CONTACT_INDEX, GENES, geneNucs } from "../content/model.js";
+import { isContactGene } from "../content/contact.js";
 
 export function createChrome({ state, nav, world }) {
   const hintEl = document.getElementById("hint");
   const syncLabel = document.getElementById("sync-label");
   const syncNow = document.getElementById("sync-now");
   const syncTotal = document.getElementById("sync-total");
+  const syncSep = document.querySelector(".sync-sep");
   const syncBox = document.getElementById("sync-box");
   const barRail = document.getElementById("bar-rail");
+  const hudContact = document.getElementById("hud-contact");
 
   let hintDismissed = false;
 
@@ -43,8 +46,10 @@ export function createChrome({ state, nav, world }) {
     const g = GENES[state.selected];
     const nucs = geneNucs(g);
     const nuc = nucs ? nucs[state.nucIndex] : null;
+    const contact = isContactGene(g);
+    hudContact?.classList.toggle("is-here", contact);
     if (nuc) {
-      syncLabel.textContent = "Contact";
+      syncLabel.textContent = nuc.name;
       syncLabel.hidden = false;
       syncNow.textContent = String(state.nucIndex + 1);
       syncTotal.textContent = String(nucs.length);
@@ -53,9 +58,15 @@ export function createChrome({ state, nav, world }) {
       syncNow.textContent = String(state.selected + 1).padStart(2, "0");
       syncTotal.textContent = String(GENES.length).padStart(2, "0");
     }
+    if (syncSep) syncSep.hidden = false;
+    syncTotal.hidden = false;
     syncBox.classList.toggle("is-contact", !!nuc);
     syncBox.classList.toggle("is-locked", !!g.locked && !nuc);
-    if (nucs) {
+    if (contact) {
+      hintEl.textContent = state.isMobileLayout
+        ? "Pull card up to write · or open a plate"
+        : "Write a line · or open a plate";
+    } else if (nucs) {
       const hasMore = state.nucIndex < nucs.length - 1;
       const hasPrev = state.nucIndex > 0;
       if (state.isMobileLayout) {
@@ -83,6 +94,13 @@ export function createChrome({ state, nav, world }) {
     world.applyWorldDots();
     updateGeneRail();
   }
+
+  hudContact?.addEventListener("click", () => {
+    if (document.body.classList.contains("is-intro")) return;
+    dismissHint();
+    if (CONTACT_INDEX < 0) return;
+    nav.setFocusToStop(nav.selectionToFocus(CONTACT_INDEX, 0));
+  });
 
   return {
     dismissHint,

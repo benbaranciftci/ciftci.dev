@@ -95,7 +95,8 @@
           <li>
             <a href="https://www.linkedin.com/in/baran-%C3%A7ift%C3%A7i-a004b9283">LinkedIn</a>
           </li>
-          <li><a href="mailto:baran@ciftci.dev">baran@ciftci.dev</a></li>
+          <li><a href="https://www.instagram.com/benbaranciftci/">Instagram · @benbaranciftci</a></li>
+          <li><a href="mailto:work.baranciftci@gmail.com">work.baranciftci@gmail.com</a></li>
         </ul>
         <p>Enable JavaScript for the interactive DNA portfolio.</p>
       </main>
@@ -131,10 +132,13 @@
       <p class="hud-brand">baran çiftçi</p>
       <p class="hint" id="hint">Browse genes along the strand</p>
       <div class="hud-sync" id="sync-box">
-        <span class="sync-top" id="sync-label" hidden>Contact</span>
-        <p class="sync-bot" id="sync-val" aria-live="polite">
-          <span class="sync-now" id="sync-now">01</span><span class="sync-sep" aria-hidden="true">/</span><span class="sync-total" id="sync-total">07</span>
-        </p>
+        <button type="button" class="hud-contact" id="hud-contact" aria-label="Jump to contact">Contact ▸</button>
+        <div class="hud-sync-count">
+          <span class="sync-top" id="sync-label" hidden>Contact</span>
+          <p class="sync-bot" id="sync-val" aria-live="polite">
+            <span class="sync-now" id="sync-now">01</span><span class="sync-sep" aria-hidden="true">/</span><span class="sync-total" id="sync-total">07</span>
+          </p>
+        </div>
       </div>
     </div>
 
@@ -150,6 +154,7 @@
         <div class="panel-logo panel-slot is-collapsed" id="panel-logo">
           <img id="panel-logo-img" src="" alt="" />
         </div>
+        <nav class="contact-else is-collapsed" id="contact-else" aria-label="Elsewhere"></nav>
         <div class="panel-head">
           <div class="panel-head-copy">
             <p class="panel-kicker" id="panel-kicker">Gene</p>
@@ -158,6 +163,67 @@
         </div>
         <p class="panel-body" id="panel-body"></p>
         <dl class="panel-facts panel-slot is-collapsed" id="panel-facts"></dl>
+        <form id="contact-form" class="contact-form is-collapsed" novalidate>
+          <input
+            class="contact-gotcha"
+            type="text"
+            name="_gotcha"
+            tabindex="-1"
+            autocomplete="off"
+            aria-hidden="true"
+          />
+          <div class="contact-field">
+            <label for="contact-name">Name</label>
+            <input
+              id="contact-name"
+              name="name"
+              type="text"
+              autocomplete="name"
+              maxlength="80"
+              required
+              placeholder="Your name"
+            />
+          </div>
+          <div class="contact-field">
+            <label for="contact-email">Return</label>
+            <input
+              id="contact-email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              maxlength="120"
+              required
+              placeholder="you@example.com"
+            />
+          </div>
+          <div class="contact-field">
+            <label for="contact-channel">About</label>
+            <select id="contact-channel" name="channel" required>
+              <option value="hello" selected>Hello</option>
+              <option value="work">Work</option>
+              <option value="collaboration">Collaboration</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="contact-field">
+            <label for="contact-message">Message</label>
+            <div class="contact-compose">
+              <textarea
+                id="contact-message"
+                name="message"
+                maxlength="1600"
+                required
+                placeholder="What should I know?"
+              ></textarea>
+              <p class="contact-hint">Keep it short. We'll expand later.</p>
+            </div>
+          </div>
+          <p class="contact-error" id="contact-error" hidden></p>
+          <button type="submit" class="panel-cta contact-send" id="contact-send">
+            Transmit ▸
+          </button>
+          <p class="contact-status" id="contact-status" hidden></p>
+        </form>
         <a class="panel-cta panel-slot is-collapsed" id="panel-cta" href="#">Enter</a>
       </div>
     </aside>
@@ -166,7 +232,7 @@
       <div class="bar-left">
         <span class="duo" aria-hidden="true"></span>
         <span class="bar-label">DNA</span>
-        <button type="button" class="bar-btn" id="btn-theme" aria-pressed="false">Dark</button>
+        <button type="button" class="bar-btn" id="btn-theme" aria-pressed="false">Mode · Day</button>
       </div>
       <div class="bar-rail" id="bar-rail" role="tablist" aria-label="Genes"></div>
       <div class="bar-right">
@@ -176,8 +242,8 @@
         <button type="button" class="bar-btn" id="btn-next" aria-label="Next">
           <kbd>→</kbd><span class="bar-btn-text"> Next</span>
         </button>
-        <button type="button" class="bar-btn bar-btn-open" id="btn-select" aria-label="Open link">
-          <kbd>↵</kbd><span class="bar-btn-text"> Open</span>
+        <button type="button" class="bar-btn bar-btn-open" id="btn-select" aria-label="Execute link">
+          <kbd>↵</kbd><span class="bar-btn-text"> Exec</span>
         </button>
       </div>
     </footer>

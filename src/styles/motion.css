@@ -23,4 +23,40 @@
   .bar {
     transition: none;
   }
+
+  .sync-sep,
+  .panel-logo::before,
+  .panel-corner {
+    animation: none;
+  }
+}
+
+@keyframes hud-tick {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.12;
+  }
+}
+
+@keyframes lamp-sweep {
+  0%,
+  100% {
+    background-position: 120% 0;
+  }
+  50% {
+    background-position: -20% 0;
+  }
+}
+
+@keyframes corner-tick {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.32;
+  }
 }
